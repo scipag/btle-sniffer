@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+"""
+Scan for Bluetooth Low Energy packets and attempt to identify them.
+"""
+
 import os
 import struct
 import socket
@@ -8,22 +12,26 @@ import contextlib
 import binascii
 import datetime
 
-from hci_constants import ScanType, AddressType, FilterPolicy, hci_max_event_size, PacketType, Event, LeEvent, \
-    AdType, CompanyId, DiscoveryType, All16BitServices
+from hci_constants import ScanType, AddressType, FilterPolicy, HCI_MAX_EVENT_SIZE, \
+    PacketType, Event, LeEvent, AdType, CompanyId, DiscoveryType, ALL_16BIT_SERVICES
 from bluez_ffi import hci_get_route, hci_le_set_scan_parameters, hci_le_set_scan_enable
 
 
 @contextlib.contextmanager
 def setup_socket():
-    if not all(hasattr(socket, a) for a in ("AF_BLUETOOTH", "BTPROTO_HCI", "SOL_HCI", "HCI_FILTER")):
+    """
+    Set up a Unix socket to read HCI packets from.
+    """
+    required_constants = ("AF_BLUETOOTH", "BTPROTO_HCI", "SOL_HCI", "HCI_FILTER")
+    if not all(hasattr(socket, a) for a in required_constants):
         raise RuntimeError("The current system does not support Unix Bluetooth sockets.")
 
     dev_id = hci_get_route()
     sock = socket.socket(
-            socket.AF_BLUETOOTH,
-            socket.SOCK_RAW,
-            socket.BTPROTO_HCI
-            )
+        socket.AF_BLUETOOTH,
+        socket.SOCK_RAW,
+        socket.BTPROTO_HCI
+    )
     sock.bind((dev_id,))
 
     hci_le_set_scan_parameters(
@@ -46,7 +54,10 @@ def setup_socket():
 
     hci_le_set_scan_enable(sock, True, False, 2000)
 
-    yield sock
+    try:
+        yield sock
+    except KeyboardInterrupt:
+        pass
 
     hci_le_set_scan_enable(sock, False, False, 2000)
 
@@ -61,7 +72,7 @@ def main():
 
     with setup_socket() as sock:
         while True:
-            d = sock.recv(hci_max_event_size)
+            d = sock.recv(HCI_MAX_EVENT_SIZE)
             # print("Raw: {}".format(binascii.hexlify(d).decode("ascii")))
 
             packet_type = PacketType(d[0])
@@ -98,7 +109,7 @@ def main():
                             elif ad_type is AdType.CompleteListOf16BitServiceClassUUIDs:
                                 service_count = (ad_length - 1) // 2
                                 services = struct.unpack_from("<{}H".format(service_count), report_data, i + 2)
-                                advertisements.append({"type": ad_type, "services": [All16BitServices.get(s, s) for s in services]})
+                                advertisements.append({"type": ad_type, "services": [ALL_16BIT_SERVICES.get(s, s) for s in services]})
                             else:
                                 ad = struct.unpack_from("<{}s".format(ad_length - 1), report_data, i + 2)
                                 ad_data = binascii.hexlify(ad[0]).decode("ascii")

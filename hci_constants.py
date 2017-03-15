@@ -1,12 +1,19 @@
 # -*- coding: utf-8 -*-
 
+"""
+Provides constants common in the Bluetooth HCI protocol.
+"""
+
 import enum
 
 
-hci_max_event_size = 260
+HCI_MAX_EVENT_SIZE = 260
 
 
 class Status(enum.IntEnum):
+    """
+    Collection of HCI return states.
+    """
     Success = 0x00
     UnknownHciCommand = 0x01
     UnknownConnectionIdentifier = 0x02
@@ -70,51 +77,21 @@ class Status(enum.IntEnum):
     CoarseClockAdjustmentRejected = 0x40
 
 
-class ExtStatus(enum.IntEnum):
-    Success = 0x00
-    Failure = 0x01
-    InvalidParameter = 0x02
-    InvalidTask = 0x03
-    MessageBufferNotAvailable = 0x04
-    InvalidMessagePointer = 0x05
-    InvalidEventID = 0x06
-    InvalidInterruptID = 0x07
-    NoTimerAvailable = 0x08
-    NonVolatileItemUninitialized = 0x09
-    NonVolatileOperationFailed = 0x0a
-    InvalidMemorySize = 0x0b
-    NonVolatileBadItemLength = 0x0c
-    BleNotReady = 0x10
-    BleAlreadyInRequestedMode = 0x11
-    BleIncorrectMode = 0x12
-    BleMemoryAllocation = 0x13
-    BleNotConnected = 0x14
-    BleNoResources = 0x15
-    BlePending = 0x16
-    BleTimeout = 0x17
-    BleInvalidRange = 0x18
-    BleLinkEncrypted = 0x19
-    BleProcedureComplete = 0x1a
-    BleGapUserCanceled = 0x30
-    BleGapConnectionNotAcceptable = 0x31
-    BleGapBondRejected = 0x32
-    BleInvalidPdu = 0x40
-    BleInsufficientAuthentication = 0x41
-    BleInsufficientEncryption = 0x42
-    BleInsufficientKeySize = 0x43
-    InvalidTaskID = 0xff
-
-
-class Command(enum.IntEnum):
-    SetEventMask = 0x0c01
-    Reset = 0x0c03
-    LeSetEventMask = 0x2001
-    LeSetScanParameters = 0x200b
-    LeSetScanEnable = 0x200c
-    GapDeviceInit = 0xfe00
+class PacketType(enum.IntEnum):
+    """
+    Known HCI packet types.
+    """
+    Invalid = 0x00
+    Command = 0x01
+    Async = 0x02
+    Sync = 0x03
+    Event = 0x04
 
 
 class Event(enum.IntEnum):
+    """
+    Common HCI event types.
+    """
     CommandComplete = 0x0e
     CommandStatus = 0x0f
     HardwareError = 0x10
@@ -124,23 +101,16 @@ class Event(enum.IntEnum):
 
 
 class LeEvent(enum.IntEnum):
+    """
+    Common HCI LE event types.
+    """
     LeAdvertisingReport = 0x02
 
 
-class VendorEvent(enum.IntEnum):
-    GapDeviceInitDone = 0x0600
-    HciExtCommandStatus = 0x067f
-
-
-class PacketType(enum.IntEnum):
-    Invalid = 0x00
-    Command = 0x01
-    Async = 0x02
-    Sync = 0x03
-    Event = 0x04
-
-
 class GapProfile(enum.IntEnum):
+    """
+    GAP communication roles/profiles.
+    """
     Broadcaster = 0x01
     Observer = 0x02
     Peripheral = 0x04
@@ -148,6 +118,9 @@ class GapProfile(enum.IntEnum):
 
 
 class DiscoveryType(enum.IntEnum):
+    """
+    LeAdvertisingReport message type.
+    """
     ConnectableUndirectedAdvertising = 0x00
     ConnectableDirectedAdvertising = 0x01
     ScannableUndirectedAdvertising = 0x02
@@ -156,6 +129,9 @@ class DiscoveryType(enum.IntEnum):
 
 
 class AddressType(enum.IntEnum):
+    """
+    Device address type.
+    """
     PublicDeviceAddress = 0x00
     RandomDeviceAddress = 0x01
     PublicIdentityAddress = 0x02
@@ -164,11 +140,17 @@ class AddressType(enum.IntEnum):
 
 
 class ScanType(enum.IntEnum):
+    """
+    LE scan type.
+    """
     PassiveScan = 0x00
     ActiveScan = 0x01
 
 
 class FilterPolicy(enum.IntEnum):
+    """
+    LE scan filter policy.
+    """
     UndirectedAdsOnly = 0x00
     WhitelistedOnly = 0x01
     ResolvableDirected = 0x02
@@ -176,6 +158,9 @@ class FilterPolicy(enum.IntEnum):
 
 
 class AdType(enum.IntEnum):
+    """
+    Advertisement data type.
+    """
     Flags = 0x01
     IncompleteListOf16BitServiceClassUUIDs = 0x02
     CompleteListOf16BitServiceClassUUIDs = 0x03
@@ -216,6 +201,9 @@ class AdType(enum.IntEnum):
 
 
 class CompanyId(enum.IntEnum):
+    """
+    Known company identifiers.
+    """
     EricssonTechnologyLicensing = 0x0000
     NokiaMobilePhones = 0x0001
     IntelCorp = 0x0002
@@ -1072,12 +1060,7 @@ class CompanyId(enum.IntEnum):
     RESERVED = 0xffff
 
 
-class ResetMode(enum.IntEnum):
-    Hard = 0x00
-    Soft = 0x01
-
-
-All16BitServices = {
+ALL_16BIT_SERVICES = {
     0x1811: "Alert Notification Service",
     0x1815: "Automation IO",
     0x180f: "Battery Service",
@@ -1326,7 +1309,5 @@ All16BitServices = {
     0xFEFC: "Gimbal, Inc.",
     0xFEFD: "Gimbal, Inc.",
     0xFEFE: "GN ReSound A/S",
-    0xFEFF: "GN Netcom",
+    0xFEFF: "GN Netcom"
 }
-
-
