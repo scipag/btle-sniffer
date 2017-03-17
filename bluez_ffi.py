@@ -23,7 +23,7 @@ class BluezError(Exception):
     """
     The BlueZ error class generates the error message from the causing function name name and ERRNO.
     """
-    def __init__(self, function_name):
+    def __init__(self, function_name: str) -> None:
         err_num = ctypes.get_errno()
         message = "In {}: {} ({}).".format(
             function_name, os.strerror(err_num), errno.errorcode[err_num]
@@ -35,7 +35,7 @@ def hci_get_route() -> int:
     """
     Return the first Bluetooth device ID.
     """
-    dev_id = BLUEZ.hci_get_route(None)
+    dev_id: int = BLUEZ.hci_get_route(None)
     if dev_id < 0:
         raise BluezError("hci_get_route")
 
@@ -49,8 +49,7 @@ def hci_le_set_scan_parameters(
         scan_window: int,
         address_type: hci_constants.AddressType,
         filter_policy: hci_constants.FilterPolicy,
-        timeout: int
-    ) -> None:
+        timeout: int) -> None:
     """
     Set LE scanning parameters.
     """
@@ -71,8 +70,7 @@ def hci_le_set_scan_enable(
         sock: socket.socket,
         enable: bool,
         filter_duplicates: bool,
-        timeout: int
-    ) -> None:
+        timeout: int) -> None:
     """
     Enable or disable LE scanning.
     """
