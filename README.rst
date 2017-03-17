@@ -6,7 +6,8 @@ In the short term, this will be converted to a proper Python distutils package, 
 
 Usage
 -----
-.. code::shell
+
+.. code::
 
     btle-sniffer [-h] [-v] [-d]
 
