@@ -19,10 +19,10 @@ REQUIRE_UID = 0
 
 def main() -> None:
     if sys.platform != REQUIRE_PLATFORM:
-        raise RuntimeError("You must run this program on Linux.")
+        raise RuntimeError("You must run this programme on Linux.")
 
     if os.geteuid() != REQUIRE_UID:
-        raise PermissionError("You must be root to run this program.")
+        raise PermissionError("You must be root to run this programme.")
 
     parser = argparse.ArgumentParser(
         prog="btle-sniffer",
