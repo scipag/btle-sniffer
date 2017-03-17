@@ -9,6 +9,7 @@ import os
 import sys
 import argparse
 import logging
+import pathlib
 
 from hci_parser import HciParser
 
@@ -39,6 +40,11 @@ def main() -> None:
         action="store_true",
         help="enable debugging features"
     )
+    parser.add_argument(
+        "-o", "--out-file",
+        type=str,
+        help="path to the dump file"
+    )
     args = parser.parse_args()
 
     if args.verbose == 1:
@@ -50,7 +56,12 @@ def main() -> None:
 
     logging.basicConfig(level=log_level)
 
-    with HciParser() as parser:
+    if args.out_file is not None:
+        backup_path = pathlib.Path(args.out_file)
+    else:
+        backup_path = None
+
+    with HciParser(backup_path) as parser:
         parser.run()
 
 

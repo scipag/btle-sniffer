@@ -10,7 +10,7 @@ import contextlib
 import binascii
 import datetime
 import logging
-import traceback
+import pathlib
 
 from typing import Tuple, Optional, Set, Any, Type
 
@@ -115,11 +115,19 @@ class AdvertisementPacket(object):
 
 
 class Device(object):
-    def union(self, other: "Device") -> None:
-        if self.vendor == other.vendor:
-            self.addresses |= other.addresses
-            self.services |= other.services
-            self.advertisements |= other.advertisements
+    def union(self, other: "Device") -> bool:
+        if self.vendor is other.vendor:
+            new_addrs = self.addresses | other.addresses
+            new_svcs = self.services | other.services
+            new_ads = self.advertisements | other.advertisements
+
+            if new_addrs == self.addresses and new_svcs == self.services and new_ads == self.advertisements:
+                return False
+            else:
+                self.addresses = new_addrs
+                self.services = new_svcs
+                self.advertisements = new_ads
+                return True
         else:
             raise ValueError("The two devices do not have the same vendor.")
 
@@ -150,7 +158,10 @@ class Device(object):
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, Device):
             shared_addrs = len(self.addresses & other.addresses) > 0
-            return shared_addrs
+            same_vendor = self.vendor is other.vendor
+            same_services = len(self.services) > 0 and self.services >= other.services
+            same_advertisements = len(self.advertisements) > 0 and self.advertisements >= other.advertisements
+            return shared_addrs or (same_vendor and (same_services or same_advertisements))
         else:
             return NotImplemented
 
@@ -165,12 +176,18 @@ class HciParser(object):
         Run the main discovery loop.
         """
         if self._sock is not None:
+            iterations: int = 0
             while True:
                 packet = self._sock.recv(HCI_MAX_EVENT_SIZE)
                 advert = self._parse_packet(packet)
                 if advert is not None:
                     device = self._analyse_advert(advert)
                     self._register_device(device)
+
+                # if iterations % 50 == 0:
+                #     self._backup_registry()
+
+                iterations += 1
         else:
             raise ValueError("You must use HciParser as context manager before calling HciParser.run().")
 
@@ -186,11 +203,15 @@ class HciParser(object):
             if idx is None:
                 self._log.info("{}".format(device))
                 self.registry.append(device)
-            else:
-                self.registry[idx].union(device)
+            elif self.registry[idx].union(device):
+                self._log.info("Device update: {}".format(self.registry[idx]))
         else:
             self._log.info("{}".format(device))
             self.registry.append(device)
+
+    def _backup_registry(self) -> None:
+        if self.backup_path is not None:
+            pass
 
     def _parse_packet(self, packet: bytes) -> Optional[AdvertisementPacket]:
         """
@@ -231,7 +252,8 @@ class HciParser(object):
 
         return device
 
-    def __init__(self) -> None:
+    def __init__(self, bkp_path: Optional[pathlib.Path] = None) -> None:
+        self.backup_path: Optional[pathlib.Path] = bkp_path
         self.registry: list = list()
         self._sock: Optional[socket.socket] = None
         self._log: logging.Logger = logging.getLogger(__name__)
