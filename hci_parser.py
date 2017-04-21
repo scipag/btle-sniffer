@@ -32,11 +32,11 @@ class Advertisement(object):
                  ad_type: AdType, 
                  ad_data: bytes, 
                  vendor: Optional[CompanyId] = None,
-                 svcs: Optional[Set[int]] = None) -> None:
-        self.type: AdType = ad_type
-        self.data: bytes = ad_data
-        self.vendor: Optional[CompanyId] = vendor
-        self.services: Optional[Set[int]] = svcs
+                 svcs: Set[int] = set()) -> None:
+        self.type = ad_type
+        self.data = ad_data
+        self.vendor = vendor
+        self.services = svcs
 
     def __hash__(self) -> int:
         return hash(self.type) + hash(self.data)
@@ -44,7 +44,7 @@ class Advertisement(object):
     def __str__(self) -> str:
         if self.type is AdType.ManufacturerSpecificData and self.vendor is not None:
             return "[{}:{}:{}]".format(self.vendor.name, self.type.name, binascii.hexlify(self.data).decode("ascii"))
-        elif self.type in (AdType.CompleteListOf16BitServiceClassUUIDs, AdType.IncompleteListOf16BitServiceClassUUIDs) and self.services is not None:
+        elif self.type in (AdType.CompleteListOf16BitServiceClassUUIDs, AdType.IncompleteListOf16BitServiceClassUUIDs) and len(self.services) > 0:
             return "[{}:{}]".format(self.type.name, [ALL_16BIT_SERVICES.get(s, s) for s in self.services])
         else:
             return "[{}:{}]".format(self.type.name, binascii.hexlify(self.data).decode("ascii"))
@@ -146,6 +146,11 @@ class Device(object):
         self.advertisements = ads
 
     def __str__(self) -> str:
+        addr_str = {binascii.hexlify(e).decode("ascii") for e in self.addresses}
+
+        return "<Device: {}>".format(addr_str)
+
+    def __repr__(self):
         if self.vendor is None:
             vendor_str = "Unknown"
         else:
@@ -192,8 +197,9 @@ class HciParser(object):
             raise ValueError("You must use HciParser as context manager before calling HciParser.run().")
 
     def _find_device(self, device: Device) -> Optional[int]:
-        if device in self.registry:
-            return self.registry.index(device)
+        for idx, rd in enumerate(self.registry):
+            if device == rd:
+                return idx
         else:
             return None
 
@@ -201,12 +207,15 @@ class HciParser(object):
         if len(self.registry) > 0:
             idx = self._find_device(device)
             if idx is None:
-                self._log.info("{}".format(device))
+                self._log.info("New device: {}".format(device))
+                self._log.debug("Full info: {!r}".format(device))
                 self.registry.append(device)
             elif self.registry[idx].union(device):
                 self._log.info("Device update: {}".format(self.registry[idx]))
+                self._log.debug("Full info: {!r}".format(self.registry[idx]))
         else:
-            self._log.info("{}".format(device))
+            self._log.info("New device: {}".format(device))
+            self._log.debug("Full info: {!r}".format(device))
             self.registry.append(device)
 
     def _backup_registry(self) -> None:
@@ -232,23 +241,11 @@ class HciParser(object):
             advert.address_type, 
             {advert.address}
         )
-        ad_str = list()
         for ad_block in advert.advertisements:
-            if ad_block.type is AdType.ManufacturerSpecificData:
-                vendor, data = struct.unpack("<H{}s".format(len(ad_block.data) - 2), ad_block.data)
-                vendor = CompanyId(vendor)
-                device.vendor = vendor
-                ad_str.append("[{}:{}:{}]".format(vendor.name, ad_block.type.name, binascii.hexlify(ad_block.data).decode("ascii")))
-            elif ad_block.type in (AdType.CompleteListOf16BitServiceClassUUIDs, AdType.IncompleteListOf16BitServiceClassUUIDs):
-                service_count = len(ad_block.data) // 2
-                services = struct.unpack("<{}H".format(service_count), ad_block.data)
-                device.services.add(services)
-                ad_str.append("[{}:{}]".format(ad_block.type.name, services))
-            else:
-                device.advertisements.add(ad_block)
-                ad_str.append("[{}:{}]".format(ad_block.type.name, binascii.hexlify(ad_block.data).decode("ascii")))
-
-        self._log.debug("".join(ad_str))
+            ad_block.analyse()
+            device.vendor = ad_block.vendor
+            device.services |= ad_block.services
+            device.advertisements.add(ad_block)
 
         return device
 
