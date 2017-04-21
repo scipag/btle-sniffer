@@ -11,15 +11,25 @@ import logging
 import pathlib
 import pickle
 
-from typing import Tuple, Optional, Set, Any, Type
+from typing import Sequence, Optional, Set, Any, Type
 
-from hci_constants import ScanType, AddressType, FilterPolicy, HCI_MAX_EVENT_SIZE, \
-    PacketType, Event, LeEvent, AdType, CompanyId, DiscoveryType, ALL_16BIT_SERVICES
-from bluez_ffi import hci_get_route, hci_le_set_scan_parameters, hci_le_set_scan_enable
+from hci_constants import ScanType, AddressType, FilterPolicy, \
+    HCI_MAX_EVENT_SIZE, PacketType, Event, LeEvent, AdType, \
+    CompanyId, DiscoveryType, ALL_16BIT_SERVICES
+from bluez_ffi import hci_get_route, hci_le_set_scan_parameters, \
+    hci_le_set_scan_enable
 
 
 class Advertisement(object):
+    """
+    Describes a single Bluetooth Low Energy Advertisement data block, 
+    as described in the Bluetooth Core specification.
+    """
     def analyse(self) -> None:
+        """
+        Analyse the Advertisement data block. Currently is capable of
+        determining the device vendor and the offered services.
+        """
         if self.type is AdType.ManufacturerSpecificData:
             vendor, data = struct.unpack("<H{}s".format(len(self.data) - 2), self.data)
             self.vendor = CompanyId(vendor)
@@ -59,30 +69,16 @@ class Advertisement(object):
 
 
 class AdvertisementPacket(object):
-    def __init__(self, 
-                 dtype: DiscoveryType, 
-                 atype: AddressType, 
-                 addr: bytes, 
-                 rssi: int, 
-                 ads: Tuple[Advertisement, ...]
-                 ) -> None:
-        self.discovery_type = dtype
-        self.address_type = atype
-        self.address = addr
-        self.rssi = rssi,
-        self.advertisements = ads
-
-    def __eq__(self, other: Any) -> bool:
-        if isinstance(other, AdvertisementPacket):
-            return self.discovery_type is other.discovery_type \
-                and self.address_type is other.address_type \
-                and self.address == other.address \
-                and self.advertisements == other.advertisements
-        else:
-            return NotImplemented
-
+    """
+    This is the logical equivalent of the le_advertising_report structure
+    in BlueZ.
+    """
     @classmethod
     def create(cls, packet: bytes, offset: int = 0) -> "AdvertisementPacket":
+        """
+        Given a packet buffer and a starting offset, extract an 
+        AdvertisementPacket.
+        """
         report_header = struct.unpack_from(">BB7sB", packet, offset)
         discovery_type = DiscoveryType(report_header[0])
         address_type = AddressType(report_header[1])
@@ -112,23 +108,54 @@ class AdvertisementPacket(object):
             tuple(advertisements)
         )
 
+    def __init__(self,
+                 dtype: DiscoveryType,
+                 atype: AddressType,
+                 addr: bytes,
+                 rssi: int,
+                 ads: Sequence[Advertisement]
+                 ) -> None:
+        self.discovery_type = dtype
+        self.address_type = atype
+        self.address = addr
+        self.rssi = rssi,
+        self.advertisements = ads
+
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, AdvertisementPacket):
+            return self.discovery_type is other.discovery_type \
+                   and self.address_type is other.address_type \
+                   and self.address == other.address \
+                   and self.advertisements == other.advertisements
+        else:
+            return NotImplemented
+
 
 class Device(object):
+    """
+    Identifies a Bluetooth Low Energy device.
+    """
     def union(self, other: "Device") -> bool:
-        if self.vendor is other.vendor:
-            new_addrs = self.addresses | other.addresses
-            new_svcs = self.services | other.services
-            new_ads = self.advertisements | other.advertisements
+        """
+        Perform an in-place union of the given device and self.
+        """
+        if isinstance(other, Device):
+            if self.vendor is other.vendor:
+                new_addrs = self.addresses | other.addresses
+                new_svcs = self.services | other.services
+                new_ads = self.advertisements | other.advertisements
 
-            if new_addrs == self.addresses and new_svcs == self.services and new_ads == self.advertisements:
-                return False
+                if new_addrs == self.addresses and new_svcs == self.services and new_ads == self.advertisements:
+                    return False
+                else:
+                    self.addresses = new_addrs
+                    self.services = new_svcs
+                    self.advertisements = new_ads
+                    return True
             else:
-                self.addresses = new_addrs
-                self.services = new_svcs
-                self.advertisements = new_ads
-                return True
+                raise ValueError("The two devices do not have the same vendor.")
         else:
-            raise ValueError("The two devices do not have the same vendor.")
+            raise TypeError("Expected a Device, got '{}'.".format(type(other)))
 
     def __init__(self, 
                  dtype: DiscoveryType, 
@@ -196,6 +223,10 @@ class HciParser(object):
             raise ValueError("You must use HciParser as context manager before calling HciParser.run().")
 
     def _find_device(self, device: Device) -> Optional[int]:
+        """
+        Determine the location of the given Device in the registry, or return
+        None.
+        """
         for idx, rd in enumerate(self.registry):
             if device == rd:
                 return idx
@@ -203,6 +234,10 @@ class HciParser(object):
             return None
 
     def _register_device(self, device: Device) -> None:
+        """
+        Given a Device, add it to the registry if it is not known, or update
+        the existing Device(s) with the new data if a match was found.
+        """
         if len(self.registry) > 0:
             idx = self._find_device(device)
             if idx is None:
@@ -218,6 +253,9 @@ class HciParser(object):
             self.registry.append(device)
 
     def _backup_registry(self) -> None:
+        """
+        If the backup path is set, dump the registry object to a Pickle backup.
+        """
         if self.backup_path is not None:
             with self.backup_path.open("wb") as f:
                 pickle.dump(self.registry, f, pickle.HIGHEST_PROTOCOL)
