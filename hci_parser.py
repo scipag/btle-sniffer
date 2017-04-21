@@ -147,7 +147,7 @@ class Device(object):
     def __str__(self) -> str:
         addr_str = {binascii.hexlify(e).decode("ascii") for e in self.addresses}
 
-        return "<Device: {}>".format(addr_str)
+        return "<Device: {} ({})>".format(addr_str, self.discovery_type.name)
 
     def __repr__(self):
         if self.vendor is None:
