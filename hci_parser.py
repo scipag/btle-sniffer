@@ -10,6 +10,7 @@ import binascii
 import logging
 import pathlib
 import pickle
+import time
 
 from typing import Sequence, Optional, Set, Any, Type
 
@@ -207,18 +208,18 @@ class HciParser(object):
         Run the main discovery loop.
         """
         if self._sock is not None:
-            iterations: int = 0
+            t: float = time.monotonic()
             while True:
+                new_t: float = time.monotonic()
                 packet = self._sock.recv(HCI_MAX_EVENT_SIZE)
                 advert = self._parse_packet(packet)
                 if advert is not None:
                     device = self._analyse_advert(advert)
                     self._register_device(device)
 
-                if iterations % self.backup_interval == 0:
+                if abs(new_t - t) >= self.backup_interval:
+                    t = new_t
                     self._backup_registry()
-
-                iterations += 1
         else:
             raise ValueError("You must use HciParser as context manager before calling HciParser.run().")
 
@@ -257,6 +258,7 @@ class HciParser(object):
         If the backup path is set, dump the registry object to a Pickle backup.
         """
         if self.backup_path is not None:
+            self._log.debug("Writing backup dump.")
             with self.backup_path.open("wb") as f:
                 pickle.dump(self.registry, f, pickle.HIGHEST_PROTOCOL)
 
@@ -286,9 +288,9 @@ class HciParser(object):
 
         return device
 
-    def __init__(self, bkp_path: Optional[pathlib.Path] = None, backup_interval: int = 50) -> None:
-        self.backup_path: Optional[pathlib.Path] = bkp_path
-        self.backup_interval: int = backup_interval
+    def __init__(self, bkp_path: Optional[pathlib.Path] = None, backup_interval: float = 60.0) -> None:
+        self.backup_path = bkp_path
+        self.backup_interval = backup_interval
         self.registry: list = list()
         self._sock: Optional[socket.socket] = None
         self._log: logging.Logger = logging.getLogger(__name__)

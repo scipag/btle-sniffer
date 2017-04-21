@@ -45,6 +45,12 @@ def main() -> None:
         type=str,
         help="path to the dump file"
     )
+    parser.add_argument(
+        "--backup-frequency",
+        type=float,
+        default=60.0,
+        help="how frequently the backup file should be written (in seconds)"
+    )
     args = parser.parse_args()
 
     if args.verbose == 1:
@@ -61,7 +67,7 @@ def main() -> None:
     else:
         backup_path = None
 
-    with HciParser(backup_path) as parser:
+    with HciParser(backup_path, args.backup_frequency) as parser:
         parser.run()
 
 
