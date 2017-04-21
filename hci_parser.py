@@ -190,7 +190,7 @@ class Device(object):
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, Device):
             shared_addrs = len(self.addresses & other.addresses) > 0
-            same_vendor = self.vendor is other.vendor
+            same_vendor = (self.vendor is not None) and (self.vendor is other.vendor)
             same_services = len(self.services) > 0 and self.services >= other.services
             same_advertisements = len(self.advertisements) > 0 and self.advertisements >= other.advertisements
             return shared_addrs or (same_vendor and (same_services or same_advertisements))
