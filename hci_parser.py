@@ -6,11 +6,10 @@ Provide classes and functions to interact with Bluetooth LE devices.
 
 import struct
 import socket
-import contextlib
 import binascii
-import datetime
 import logging
 import pathlib
+import pickle
 
 from typing import Tuple, Optional, Set, Any, Type
 
@@ -189,8 +188,8 @@ class HciParser(object):
                     device = self._analyse_advert(advert)
                     self._register_device(device)
 
-                # if iterations % 50 == 0:
-                #     self._backup_registry()
+                if iterations % self.backup_interval == 0:
+                    self._backup_registry()
 
                 iterations += 1
         else:
@@ -220,13 +219,13 @@ class HciParser(object):
 
     def _backup_registry(self) -> None:
         if self.backup_path is not None:
-            pass
+            with self.backup_path.open("wb") as f:
+                pickle.dump(self.registry, f, pickle.HIGHEST_PROTOCOL)
 
     def _parse_packet(self, packet: bytes) -> Optional[AdvertisementPacket]:
         """
         Parse the next packet in the socket.
         """
-        self._log.debug("Raw: {}".format(binascii.hexlify(packet).decode("ascii")))
         if packet[0] == PacketType.Event and packet[1] == Event.Le and packet[3] == LeEvent.LeAdvertisingReport:
             return AdvertisementPacket.create(packet, 4)
 
@@ -249,8 +248,9 @@ class HciParser(object):
 
         return device
 
-    def __init__(self, bkp_path: Optional[pathlib.Path] = None) -> None:
+    def __init__(self, bkp_path: Optional[pathlib.Path] = None, backup_interval: int = 50) -> None:
         self.backup_path: Optional[pathlib.Path] = bkp_path
+        self.backup_interval: int = backup_interval
         self.registry: list = list()
         self._sock: Optional[socket.socket] = None
         self._log: logging.Logger = logging.getLogger(__name__)
