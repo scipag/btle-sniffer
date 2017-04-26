@@ -1,7 +1,14 @@
 # BTLE-Sniffer
 This is a simple Python 3.5+ utility for monitoring Bluetooth Low Energy traffic and to register devices.
 
-In the short term, this will be converted to a proper Python distutils package, but for now, the scripts are as is.
+## Dependencies
+As this project relies on BlueZ and libbluetooth, it will only run on Linux
+systems. Currently, there are no other dependencies.
+
+## Installing
+You can now use `pip` or `setuptools` to install the package:
+
+    $ pip install -U git+https://github.com/scipag/btle-sniffer.git
 
 ## Usage
 
