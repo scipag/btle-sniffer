@@ -13,6 +13,7 @@ import pathlib
 
 # from .sniffer import Sniffer
 from .hci_parser import HciParser
+from ._version import get_versions
 
 
 REQUIRE_PLATFORM = "linux"
@@ -29,6 +30,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="btlesniffer",
         description="Scan for Bluetooth Low Energy devices and gather information about them."
+    )
+    parser.add_argument(
+        "-V", "--version",
+        action="version",
+        version="btlesniffer {}".format(get_versions()["version"]),
+        help="display version information and exit"
     )
     parser.add_argument(
         "-v", "--verbose",
