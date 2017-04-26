@@ -14,10 +14,10 @@ import time
 
 from typing import Sequence, Optional, Set, Any, Type
 
-from hci_constants import ScanType, AddressType, FilterPolicy, \
+from .hci_constants import ScanType, AddressType, FilterPolicy, \
     HCI_MAX_EVENT_SIZE, PacketType, Event, LeEvent, AdType, \
     CompanyId, DiscoveryType, ALL_16BIT_SERVICES
-from bluez_ffi import hci_get_route, hci_le_set_scan_parameters, \
+from .bluez_ffi import hci_get_route, hci_le_set_scan_parameters, \
     hci_le_set_scan_enable
 
 

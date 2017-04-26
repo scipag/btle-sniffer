@@ -11,7 +11,8 @@ import argparse
 import logging
 import pathlib
 
-from hci_parser import HciParser
+# from .sniffer import Sniffer
+from .hci_parser import HciParser
 
 
 REQUIRE_PLATFORM = "linux"
@@ -26,7 +27,7 @@ def main() -> None:
         raise PermissionError("You must be root to run this programme.")
 
     parser = argparse.ArgumentParser(
-        prog="btle-sniffer",
+        prog="btlesniffer",
         description="Scan for Bluetooth Low Energy devices and gather information about them."
     )
     parser.add_argument(
@@ -67,6 +68,7 @@ def main() -> None:
     else:
         backup_path = None
 
+    # Sniffer(backup_path, args.backup_frequency).run()
     with HciParser(backup_path, args.backup_frequency) as parser:
         parser.run()
 

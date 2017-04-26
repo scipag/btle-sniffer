@@ -10,7 +10,7 @@ import ctypes.util
 import errno
 import socket
 
-import hci_constants
+from .hci_constants import AddressType, ScanType, FilterPolicy
 
 BLUETOOTH_LIBRARY_NAME = ctypes.util.find_library("bluetooth")
 if BLUETOOTH_LIBRARY_NAME is None:
@@ -44,11 +44,11 @@ def hci_get_route() -> int:
 
 def hci_le_set_scan_parameters(
         sock: socket.socket,
-        scan_type: hci_constants.ScanType,
+        scan_type: ScanType,
         scan_interval: int,
         scan_window: int,
-        address_type: hci_constants.AddressType,
-        filter_policy: hci_constants.FilterPolicy,
+        address_type: AddressType,
+        filter_policy: FilterPolicy,
         timeout: int) -> None:
     """
     Set LE scanning parameters.
