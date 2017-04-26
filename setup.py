@@ -29,7 +29,7 @@ if __name__ == "__main__":
         cmdclass=versioneer.get_cmdclass(),
         platforms="linux",
         install_requires=(
-            # "pydbus",
+            "pydbus",
         ),
         entry_points={
             "console_scripts": ("btlesniffer = btlesniffer.main:main",)

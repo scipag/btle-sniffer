@@ -11,8 +11,8 @@ import argparse
 import logging
 import pathlib
 
-# from .sniffer import Sniffer
-from .hci_parser import HciParser
+from .sniffer import Sniffer
+# from .hci_parser import HciParser
 from ._version import get_versions
 
 
@@ -75,9 +75,9 @@ def main() -> None:
     else:
         backup_path = None
 
-    # Sniffer(backup_path, args.backup_frequency).run()
-    with HciParser(backup_path, args.backup_frequency) as parser:
-        parser.run()
+    Sniffer(backup_path, args.backup_frequency).run()
+    # with HciParser(backup_path, args.backup_frequency) as parser:
+    #     parser.run()
 
 
 if __name__ == "__main__":
