@@ -11,6 +11,8 @@ import pydbus
 SERVICE_NAME = "org.bluez"
 ADAPTER_INTERFACE = "{}.Adapter1".format(SERVICE_NAME)
 DEVICE_INTERFACE = "{}.Device1".format(SERVICE_NAME)
+OBJECT_MANAGER_INTERFACE = "org.freedesktop.DBus.ObjectManager"
+PROPERTIES_INTERFACE = "org.freedesktop.DBus.Properties"
 
 
 class BlueZDBusException(Exception):
@@ -23,7 +25,7 @@ def get_managed_objects():
     of the BlueZ service.
     """
     bus = pydbus.SystemBus()
-    manager = bus.get(SERVICE_NAME, "/")["org.freedesktop.DBus.ObjectManager"]
+    manager = bus.get(SERVICE_NAME, "/")[OBJECT_MANAGER_INTERFACE]
     return manager.GetManagedObjects()
 
 
