@@ -75,7 +75,8 @@ def main() -> None:
     else:
         backup_path = None
 
-    Sniffer(backup_path, args.backup_frequency).run()
+    with Sniffer(backup_path, args.backup_frequency) as sniffer:
+        sniffer.run()
     # with HciParser(backup_path, args.backup_frequency) as parser:
     #     parser.run()
 
