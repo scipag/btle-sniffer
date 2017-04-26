@@ -2,8 +2,9 @@
 This is a simple Python 3.5+ utility for monitoring Bluetooth Low Energy traffic and to register devices.
 
 ## Dependencies
-As this project relies on BlueZ and libbluetooth, it will only run on Linux
-systems. Currently, there are no other dependencies.
+As this project relies on BlueZ, it will only run on Linux
+systems. The project further requires GLib2, PyGobject (commonly known as
+python-gi, python-gobject or pygobject, but not packaged on PyPi) and D-Bus.
 
 ## Installing
 You can now use `pip` or `setuptools` to install the package:
