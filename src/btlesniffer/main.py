@@ -54,8 +54,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--backup-frequency",
-        type=float,
-        default=60.0,
+        type=int,
+        default=60,
         help="how frequently the device registry backup should be written (in seconds)"
     )
     parser.add_argument(
@@ -79,7 +79,7 @@ def main() -> None:
     else:
         backup_path = None
 
-    with Sniffer(backup_path, args.backup_frequency, args.resume) as sniffer:
+    with Sniffer(backup_path, args.backup_frequency, 30, args.resume) as sniffer:
         sniffer.run()
 
 

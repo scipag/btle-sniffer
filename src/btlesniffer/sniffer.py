@@ -7,10 +7,12 @@ devices.
 
 import logging
 import pickle
+import datetime
 
 import pydbus
 from gi.repository import GLib
 
+from .hci_constants import CompanyId
 from .util import SERVICE_NAME, DEVICE_INTERFACE, OBJECT_MANAGER_INTERFACE, \
     PROPERTIES_INTERFACE, find_adapter
 
@@ -34,6 +36,7 @@ class Device(object):
         )
 
     def update_from_dbus_dict(self, data):
+        self.last_seen = datetime.datetime.now()
         if "Address" in data:
             self.addresses.add(data["Address"])
         if "Paired" in data:
@@ -55,9 +58,17 @@ class Device(object):
         if "TxPower" in data:
             self.tx_power = data["TxPower"]
         if "ManufacturerData" in data:
-            pass
+            for k, v in data["ManufacturerData"].items():
+                if k in self.manufacturer_data:
+                    self.manufacturer_data[k].append(v)
+                else:
+                    self.manufacturer_data[k] = [v]
         if "ServiceData" in data:
-            pass
+            for k, v in data["ServiceData"].items():
+                if k in self.service_data:
+                    self.service_data[k].append(v)
+                else:
+                    self.service_data[k] = [v]
 
     def __init__(self, address, paired, connected, services_resolved,
                  name=None, device_class=None, appearance=None,
@@ -73,8 +84,18 @@ class Device(object):
         self.uuids = set(uuids) if uuids is not None else set()
         self.rssis = [rssi] if rssi is not None else list()
         self.tx_power = tx_power
-        self.manufacturer_data = manufacturer_data
-        self.service_data = service_data
+        self.first_seen = datetime.datetime.now()
+        self.last_seen = datetime.datetime.now()
+
+        self.manufacturer_data = dict()
+        if manufacturer_data is not None:
+            for k, v in manufacturer_data.items():
+                self.manufacturer_data[k] = [v]
+
+        self.service_data = dict()
+        if service_data is not None:
+            for k, v in service_data.items():
+                self.service_data[k] = [v]
 
     def __repr__(self):
         return "{}{}".format(self.__class__.__name__, (
@@ -84,7 +105,24 @@ class Device(object):
         ))
 
     def __str__(self):
-        return "<{}>".format(self.addresses)
+        name = self.name if self.name is not None else "Unknown"
+        device_class = self.device_class if self.device_class is not None else "Unknown"
+        appearance = self.appearance if self.appearance is not None else "Unknown"
+        num_man_fac_pkts = sum(len(v) for v in self.manufacturer_data.values())
+        vendors = ", ".join(CompanyId(k).name for k in self.manufacturer_data.keys())
+        return "Device:\n" \
+               "  Adresses: {},\n" \
+               "  Paired: {}, Connected: {},\n" \
+               "  Name: {}, Device Class: {}, Appearance: {}\n" \
+               "  Number of Services: {}, Services Resolved: {}\n" \
+               "  First Seen: {}, Last Seen: {}\n" \
+               "  RSSI: {},\n" \
+               "  Manufacturer Data Packets: {}, Known Vendors: {},\n" \
+               "  Service Data: {}".format(
+            self.addresses, self.paired, self.connected,
+            name, device_class, appearance, len(self.uuids),
+            self.services_resolved, self.first_seen.isoformat(), self.last_seen.isoformat(),
+            self.rssis[-1], num_man_fac_pkts, vendors, self.service_data)
 
 
 class Sniffer(object):
@@ -113,7 +151,9 @@ class Sniffer(object):
             )
 
             self._log.debug("Running the main loop.")
-            GLib.timeout_add_seconds(self.backup_interval, self._cb_backup_registry)
+            if self.output_path is not None:
+                GLib.timeout_add_seconds(self.backup_interval, self._cb_backup_registry)
+            GLib.timeout_add_seconds(self.display_interval, self._cb_display_registry)
             loop = GLib.MainLoop()
             loop.run()
         else:
@@ -145,16 +185,25 @@ class Sniffer(object):
         """
         If the backup path is set, dump the registry object to a Pickle backup.
         """
-        if self.output_path is not None:
-            self._log.info("Backing up the Device registry.")
-            with self.output_path.open("wb") as f:
-                pickle.dump(self.registry, f, protocol=pickle.HIGHEST_PROTOCOL)
+        self._log.info("Backing up the Device registry.")
+        with self.output_path.open("wb") as f:
+            pickle.dump(self.registry, f, protocol=pickle.HIGHEST_PROTOCOL)
 
         return True
 
-    def __init__(self, output_path=None, backup_interval=60.0, resume=False):
+    def _cb_display_registry(self):
+        """
+        Display the contents of the registry.
+        """
+        if len(self.registry) > 0:
+            self._log.info("Registry Status:\n{}".format("\n\n".join(str(d) for d in self.registry.values())))
+
+        return True
+
+    def __init__(self, output_path=None, backup_interval=60, display_interval=50, resume=False):
         self.output_path = output_path
         self.backup_interval = backup_interval
+        self.display_interval = display_interval
         self.adapter = None
         self._log = logging.getLogger("btlesniffer.Sniffer")
 
