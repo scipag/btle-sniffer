@@ -13,8 +13,8 @@ You can now use `pip` or `setuptools` to install the package:
 
 ## Usage
 
-    btlesniffer [-h] [-V] [-v] [-d] [-o OUT_FILE]
-                [--backup-frequency BACKUP_FREQUENCY]
+    btlesniffer [-h] [-V] [-v] [-d] [-o OUT_PATH]
+                [--backup-frequency BACKUP_FREQUENCY] [--resume]
 
     Scan for Bluetooth Low Energy devices and gather information about them.
 
@@ -23,9 +23,10 @@ You can now use `pip` or `setuptools` to install the package:
       -V, --version         display version information and exit
       -v, --verbose         increase the verbosity of the program
       -d, --debug           enable debugging features
-      -o OUT_FILE, --out-file OUT_FILE
-                            path to the dump file
+      -o OUT_PATH, --out-path OUT_PATH
+                            path to the device registry backup
       --backup-frequency BACKUP_FREQUENCY
-                            how frequently the backup file should be written (in
-                            seconds)
-
+                            how frequently the device registry backup should be
+                            written (in seconds)
+      --resume              resume from a previous device registry backup (must
+                            specify the `-o` option)

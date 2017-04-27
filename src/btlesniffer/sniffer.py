@@ -7,10 +7,9 @@ devices.
 
 import logging
 import pickle
-import time
 
 import pydbus
-import gi.repository
+from gi.repository import GLib
 
 from .util import SERVICE_NAME, DEVICE_INTERFACE, OBJECT_MANAGER_INTERFACE, \
     PROPERTIES_INTERFACE, find_adapter
@@ -114,21 +113,12 @@ class Sniffer(object):
             )
 
             self._log.debug("Running the main loop.")
-            loop = gi.repository.GLib.MainLoop()
-            self.current_time = time.monotonic()
+            GLib.timeout_add_seconds(self.backup_interval, self._cb_backup_degistry)
+            loop = GLib.MainLoop()
             loop.run()
         else:
             raise ValueError("Sniffer.run can only be called in a context "
                              "(e.g. `with Sniffer(...) as s: s.run()`)")
-
-    def _backup_registry(self):
-        """
-        If the backup path is set, dump the registry object to a Pickle backup.
-        """
-        if self.backup_path is not None:
-            self._log.debug("Backing up the Device registry.")
-            with self.backup_path.open("wb") as f:
-                pickle.dump(self.registry, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     def _cb_interfaces_added(self, sender, obj, iface, signal, params):
         """
@@ -138,11 +128,6 @@ class Sniffer(object):
         (path, interfaces) = params
         if DEVICE_INTERFACE in interfaces:
             self.registry[path] = Device.create_from_dbus_dict(interfaces[DEVICE_INTERFACE])
-
-            new_time = time.monotonic()
-            if abs(new_time - self.current_time) >= self.backup_interval:
-                self.current_time = new_time
-                self._backup_registry()
 
     def _cb_properties_changed(self, sender, obj, iface, signal, params):
         """
@@ -156,13 +141,29 @@ class Sniffer(object):
             else:
                 self._log.warning("Received an update for a Device not in the registry.")
 
-    def __init__(self, backup_path=None, backup_interval=60.0):
-        self.backup_path = backup_path
+    def _cb_backup_degistry(self):
+        """
+        If the backup path is set, dump the registry object to a Pickle backup.
+        """
+        if self.output_path is not None:
+            self._log.info("Backing up the Device registry.")
+            with self.output_path.open("wb") as f:
+                pickle.dump(self.registry, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+        return True
+
+    def __init__(self, output_path=None, backup_interval=60.0, resume=False):
+        self.output_path = output_path
         self.backup_interval = backup_interval
         self.adapter = None
-        self.registry = dict()
-        self.current_time = None
         self._log = logging.getLogger("btlesniffer.Sniffer")
+
+        if resume and self.output_path is not None and self.output_path.exists():
+            self._log.info("Resuming from a previous Device registry backup.")
+            with self.output_path.open("rb") as f:
+                self.registry = pickle.load(f)
+        else:
+            self.registry = dict()
 
     def __enter__(self):
         self.adapter = find_adapter()

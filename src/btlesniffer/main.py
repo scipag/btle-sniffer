@@ -12,7 +12,6 @@ import logging
 import pathlib
 
 from .sniffer import Sniffer
-# from .hci_parser import HciParser
 from ._version import get_versions
 
 
@@ -49,15 +48,20 @@ def main() -> None:
         help="enable debugging features"
     )
     parser.add_argument(
-        "-o", "--out-file",
+        "-o", "--out-path",
         type=str,
-        help="path to the dump file"
+        help="path to the device registry backup"
     )
     parser.add_argument(
         "--backup-frequency",
         type=float,
         default=60.0,
-        help="how frequently the backup file should be written (in seconds)"
+        help="how frequently the device registry backup should be written (in seconds)"
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="resume from a previous device registry backup (must specify the `-o` option)"
     )
     args = parser.parse_args()
 
@@ -70,15 +74,13 @@ def main() -> None:
 
     logging.basicConfig(level=log_level)
 
-    if args.out_file is not None:
-        backup_path = pathlib.Path(args.out_file)
+    if args.out_path is not None:
+        backup_path = pathlib.Path(args.out_path)
     else:
         backup_path = None
 
-    with Sniffer(backup_path, args.backup_frequency) as sniffer:
+    with Sniffer(backup_path, args.backup_frequency, args.resume) as sniffer:
         sniffer.run()
-    # with HciParser(backup_path, args.backup_frequency) as parser:
-    #     parser.run()
 
 
 if __name__ == "__main__":
