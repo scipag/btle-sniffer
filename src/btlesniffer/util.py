@@ -78,3 +78,4 @@ def find_device(device_address, adapter_pattern=None):
     corresponding adapter pattern.
     """
     return find_device_in_objects(get_managed_objects(), device_address, adapter_pattern)
+
