@@ -113,7 +113,7 @@ class Sniffer(object):
             )
 
             self._log.debug("Running the main loop.")
-            GLib.timeout_add_seconds(self.backup_interval, self._cb_backup_degistry)
+            GLib.timeout_add_seconds(self.backup_interval, self._cb_backup_registry)
             loop = GLib.MainLoop()
             loop.run()
         else:
@@ -141,7 +141,7 @@ class Sniffer(object):
             else:
                 self._log.warning("Received an update for a Device not in the registry.")
 
-    def _cb_backup_degistry(self):
+    def _cb_backup_registry(self):
         """
         If the backup path is set, dump the registry object to a Pickle backup.
         """
