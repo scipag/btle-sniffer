@@ -72,6 +72,34 @@ class Device(object):
                 else:
                     self.service_data[k] = [v]
 
+    def update_from_device(self, device):
+        self.paths |= device.paths
+        self.addresses |= device.addresses
+        self.paired |= device.paired
+        self.connected |= device.connected
+        self.services_resolved |= device.services_resolved
+        if device.name is not None:
+            self.name = device.name
+        if device.device_class is not None:
+            self.device_class = device.device_class
+        if device.appearance is not None:
+            self.appearance = device.appearance
+        self.uuids |= device.uuids
+        self.rssis.extend(device.rssis)
+        if device.tx_power is not None:
+            self.tx_power = device.tx_power
+        self.last_seen = device.last_seen
+        for k, v in device.manufacturer_data.items():
+            if k in self.manufacturer_data:
+                self.manufacturer_data[k].extend(v)
+            else:
+                self.manufacturer_data[k] = v
+        for k, v in device.service_data.items():
+            if k in self.service_data:
+                self.service_data[k].extend(v)
+            else:
+                self.service_data[k] = v
+
     def __init__(self, path, address, paired, connected, services_resolved,
                  name=None, device_class=None, appearance=None,
                  uuids=None, rssi=None, tx_power=None, manufacturer_data=None,
@@ -100,6 +128,14 @@ class Device(object):
             for k, v in service_data.items():
                 self.service_data[k] = [v]
 
+    def __eq__(self, other):
+        if isinstance(other, Device):
+            address_match = len(self.addresses & other.addresses) > 0
+
+            return address_match
+        else:
+            return NotImplemented
+
     def __repr__(self):
         return "{}{}".format(self.__class__.__name__, (
             self.paths, self.addresses, self.paired, self.connected,
@@ -114,7 +150,13 @@ class Device(object):
         device_class = self.device_class if self.device_class is not None else "Unknown"
         appearance = self.appearance if self.appearance is not None else "Unknown"
         num_man_fac_pkts = sum(len(v) for v in self.manufacturer_data.values())
-        vendors = ", ".join(CompanyId(k).name for k in self.manufacturer_data.keys())
+        vendors = list()
+        for k in self.manufacturer_data.keys():
+            try:
+                vendors.append(CompanyId(k).name)
+            except ValueError:
+                vendors.append(str(k))
+
         return "Device:\n" \
                "  Adresses: {},\n" \
                "  Paired: {}, Connected: {},\n" \
@@ -127,7 +169,7 @@ class Device(object):
             self.addresses, self.paired, self.connected,
             name, device_class, appearance, len(self.uuids),
             self.services_resolved, self.first_seen.isoformat(), self.last_seen.isoformat(),
-            self.rssis[-1], num_man_fac_pkts, vendors, self.service_data)
+            self.rssis[-1], num_man_fac_pkts, ", ".join(vendors), self.service_data)
 
 
 class Sniffer(object):
@@ -172,8 +214,7 @@ class Sniffer(object):
         self._log.debug("Caught the signal InterfacesAddded.")
         (path, interfaces) = params
         if DEVICE_INTERFACE in interfaces:
-            device = Device.create_from_dbus_dict(path, interfaces[DEVICE_INTERFACE])
-            self.registry[path] = device
+            self._register_device(Device.create_from_dbus_dict(path, interfaces[DEVICE_INTERFACE]))
 
     def _cb_properties_changed(self, sender, obj, iface, signal, params):
         """
@@ -182,8 +223,9 @@ class Sniffer(object):
         """
         self._log.debug("Caught the signal PropertiesChanged.")
         if DEVICE_INTERFACE in params:
-            if obj in self.registry:
-                self.registry[obj].update_from_dbus_dict(obj, params[1])
+            device = self._find_device_by_path(obj)
+            if device is not None:
+                device.update_from_dbus_dict(obj, params[1])
             else:
                 self._log.warning("Received an update for a Device not in the registry.")
 
@@ -206,7 +248,22 @@ class Sniffer(object):
 
         return True
 
-    def __init__(self, output_path=None, backup_interval=60, display_interval=50, resume=False):
+    def _register_device(self, device):
+        for d in self.registry.values():
+            if device == d:
+                self._log.debug("Updating an existing device.")
+                d.update_from_device(device)
+                return
+        else:
+            self._log.debug("Adding a new device.")
+            self.registry[list(device.paths)[0]] = device
+
+    def _find_device_by_path(self, path):
+        for d in self.registry.values():
+            if path in d.paths:
+                return d
+
+    def __init__(self, output_path=None, backup_interval=60, display_interval=30, resume=False):
         self.output_path = output_path
         self.backup_interval = backup_interval
         self.display_interval = display_interval
