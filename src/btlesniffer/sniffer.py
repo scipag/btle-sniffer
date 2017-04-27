@@ -19,8 +19,9 @@ from .util import SERVICE_NAME, DEVICE_INTERFACE, OBJECT_MANAGER_INTERFACE, \
 
 class Device(object):
     @classmethod
-    def create_from_dbus_dict(cls, data):
+    def create_from_dbus_dict(cls, path, data):
         return cls(
+            path,
             data["Address"],
             data["Paired"],
             data["Connected"],
@@ -35,8 +36,9 @@ class Device(object):
             data.get("ServiceData", dict())
         )
 
-    def update_from_dbus_dict(self, data):
+    def update_from_dbus_dict(self, path, data):
         self.last_seen = datetime.datetime.now()
+        self.paths.add(path)
         if "Address" in data:
             self.addresses.add(data["Address"])
         if "Paired" in data:
@@ -70,10 +72,11 @@ class Device(object):
                 else:
                     self.service_data[k] = [v]
 
-    def __init__(self, address, paired, connected, services_resolved,
+    def __init__(self, path, address, paired, connected, services_resolved,
                  name=None, device_class=None, appearance=None,
                  uuids=None, rssi=None, tx_power=None, manufacturer_data=None,
                  service_data=None):
+        self.paths = {path}
         self.addresses = {address}
         self.paired = paired
         self.connected = connected
@@ -99,9 +102,11 @@ class Device(object):
 
     def __repr__(self):
         return "{}{}".format(self.__class__.__name__, (
-            self.addresses, self.paired, self.connected, self.services_resolved,
-            self.name, self.device_class, self.appearance, self.uuids,
-            self.rssis, self.tx_power, self.manufacturer_data, self.service_data
+            self.paths, self.addresses, self.paired, self.connected,
+            self.services_resolved, self.name, self.device_class,
+            self.appearance, self.uuids, self.rssis, self.tx_power,
+            self.first_seen, self.last_seen,
+            self.manufacturer_data, self.service_data
         ))
 
     def __str__(self):
@@ -167,7 +172,8 @@ class Sniffer(object):
         self._log.debug("Caught the signal InterfacesAddded.")
         (path, interfaces) = params
         if DEVICE_INTERFACE in interfaces:
-            self.registry[path] = Device.create_from_dbus_dict(interfaces[DEVICE_INTERFACE])
+            device = Device.create_from_dbus_dict(path, interfaces[DEVICE_INTERFACE])
+            self.registry[path] = device
 
     def _cb_properties_changed(self, sender, obj, iface, signal, params):
         """
@@ -177,7 +183,7 @@ class Sniffer(object):
         self._log.debug("Caught the signal PropertiesChanged.")
         if DEVICE_INTERFACE in params:
             if obj in self.registry:
-                self.registry[obj].update_from_dbus_dict(params[1])
+                self.registry[obj].update_from_dbus_dict(obj, params[1])
             else:
                 self._log.warning("Received an update for a Device not in the registry.")
 
