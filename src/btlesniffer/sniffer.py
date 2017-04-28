@@ -53,7 +53,7 @@ class Sniffer(object):
 
     def _cb_interfaces_added(self, sender, obj, iface, signal, params):
         """
-        Upon receiving the InterfacesAdded signal, register any new Device.
+        Upon receiving the InterfacesAdded signal, register any new device.
         """
         self._log.debug("Caught the signal InterfacesAddded.")
         (path, interfaces) = params
@@ -63,7 +63,7 @@ class Sniffer(object):
     def _cb_properties_changed(self, sender, obj, iface, signal, params):
         """
         Upon receiving the PropertiesChanged signal, update previously
-        registered Devices.
+        registered devices.
         """
         self._log.debug("Caught the signal PropertiesChanged.")
         if DEVICE_INTERFACE in params:
@@ -71,13 +71,13 @@ class Sniffer(object):
             if device is not None:
                 device.update_from_dbus_dict(obj, params[1])
             else:
-                self._log.warning("Received an update for a Device not in the registry.")
+                self._log.warning("Received an update for a device not in the registry.")
 
     def _cb_backup_registry(self):
         """
         If the backup path is set, dump the registry object to a Pickle backup.
         """
-        self._log.info("Backing up the Device registry.")
+        self._log.info("Backing up the device registry.")
         with self.output_path.open("wb") as f:
             pickle.dump(self.registry, f, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -115,19 +115,22 @@ class Sniffer(object):
         self._log = logging.getLogger("btlesniffer.Sniffer")
 
         if resume and self.output_path is not None and self.output_path.exists():
-            self._log.info("Resuming from a previous Device registry backup.")
+            self._log.info("Resuming from a previous device registry backup.")
             with self.output_path.open("rb") as f:
                 self.registry = pickle.load(f)
         else:
             self.registry = dict()
 
     def __enter__(self):
+        self._log.debug("Choosing the first available Bluetooth adapter and "
+                        "starting device discovery.")
         self.adapter = find_adapter()
         self.adapter.StartDiscovery()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.adapter is not None:
+            self._log.debug("Stopping device discovery.")
             self.adapter.StopDiscovery()
 
         return False
