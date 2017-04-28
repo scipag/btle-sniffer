@@ -21,13 +21,17 @@ if __name__ == "__main__":
         url="https://github.com/scipag/btle-sniffer.git",
         classifiers=(
             "Development Status :: 3 - Alpha",
-            "Intended Audience :: End Users",
+            "Environment :: Console",
+            "Intended Audience :: Information Technology",
             "License :: OSI Approved :: MIT License",
-            "Programming Language :: Python :: 3"
+            "Operating System :: POSIX :: Linux",
+            "Programming Language :: Python :: 3 :: Only",
+            "Programming Language :: Python :: 3.5",
+            "Programming Language :: Python :: 3.6"
         ),
         version=versioneer.get_version(),
         cmdclass=versioneer.get_cmdclass(),
-        platforms="linux",
+        platforms=("linux",),
         install_requires=(
             "pydbus",
         ),
