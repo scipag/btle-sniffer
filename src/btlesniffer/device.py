@@ -126,9 +126,13 @@ class Device(object):
 
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, Device):
-            address_match = len(self.addresses & other.addresses) > 0
-
-            return address_match
+            shared_addrs = len(self.addresses & other.addresses) > 0
+            same_name = self.name is not None and self.name == other.name
+            same_class = self.device_class is not None and self.device_class == other.device_class
+            same_appearance = self.appearance is not None and self.appearance == other.appearance
+            same_vendors = len(self.manufacturer_data) > 0 and self.manufacturer_data.keys() == other.manufacturer_data.keys()
+            same_services = len(self.service_data) > 0 and self.service_data.keys() == other.service_data.keys()
+            return (shared_addrs or same_name or same_class or same_appearance) and (same_vendors or same_services)
         else:
             return NotImplemented
 
