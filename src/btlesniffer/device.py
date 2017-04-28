@@ -5,12 +5,13 @@ Provides the Device abstraction of a Bluetooth device akin to org.bluez.Device1.
 """
 
 import datetime
+from typing import Dict, Any, Optional, Sequence
 
 from .hci_constants import CompanyId
 
 class Device(object):
     @classmethod
-    def create_from_dbus_dict(cls, path, data):
+    def create_from_dbus_dict(cls, path: str, data: Dict[str, Any]) -> "Device":
         return cls(
             path,
             data["Address"],
@@ -27,7 +28,7 @@ class Device(object):
             data.get("ServiceData", dict())
         )
 
-    def update_from_dbus_dict(self, path, data):
+    def update_from_dbus_dict(self, path: str, data: Dict[str, Any]) -> None:
         self.last_seen = datetime.datetime.now()
         self.paths.add(path)
         if "Address" in data:
@@ -63,7 +64,7 @@ class Device(object):
                 else:
                     self.service_data[k] = [v]
 
-    def update_from_device(self, device):
+    def update_from_device(self, device: "Device") -> None:
         self.paths |= device.paths
         self.addresses |= device.addresses
         self.paired |= device.paired
@@ -91,10 +92,14 @@ class Device(object):
             else:
                 self.service_data[k] = v
 
-    def __init__(self, path, address, paired, connected, services_resolved,
-                 name=None, device_class=None, appearance=None,
-                 uuids=None, rssi=None, tx_power=None, manufacturer_data=None,
-                 service_data=None):
+    def __init__(self,
+                 path: str, address: str,
+                 paired: bool, connected: bool, services_resolved: bool,
+                 name: Optional[str] = None, device_class: Optional[int] = None,
+                 appearance: Optional[int] = None, uuids: Sequence[str] = None,
+                 rssi: int = None, tx_power: int = None,
+                 manufacturer_data: Dict[int, Sequence[int]] = None,
+                 service_data: Dict[str, Sequence[int]] = None) -> None:
         self.paths = {path}
         self.addresses = {address}
         self.paired = paired
@@ -119,7 +124,7 @@ class Device(object):
             for k, v in service_data.items():
                 self.service_data[k] = [v]
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if isinstance(other, Device):
             address_match = len(self.addresses & other.addresses) > 0
 
@@ -127,7 +132,7 @@ class Device(object):
         else:
             return NotImplemented
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{}{}".format(self.__class__.__name__, (
             self.paths, self.addresses, self.paired, self.connected,
             self.services_resolved, self.name, self.device_class,
@@ -136,7 +141,7 @@ class Device(object):
             self.manufacturer_data, self.service_data
         ))
 
-    def __str__(self):
+    def __str__(self) -> str:
         name = self.name if self.name is not None else "Unknown"
         device_class = self.device_class if self.device_class is not None else "Unknown"
         appearance = self.appearance if self.appearance is not None else "Unknown"
