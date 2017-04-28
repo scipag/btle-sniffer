@@ -16,19 +16,14 @@ from ._version import get_versions
 
 
 REQUIRE_PLATFORM = "linux"
-REQUIRE_UID = 0
 
 
 def main() -> None:
-    if sys.platform != REQUIRE_PLATFORM:
-        raise RuntimeError("You must run this programme on Linux.")
-
-    if os.geteuid() != REQUIRE_UID:
-        raise PermissionError("You must be root to run this programme.")
-
     parser = argparse.ArgumentParser(
         prog="btlesniffer",
-        description="Scan for Bluetooth Low Energy devices and gather information about them."
+        description="Scan for Bluetooth Low Energy devices and gather "
+                    "information about them. This program will only run on"
+                    "Linux systems and will require root permissions."
     )
     parser.add_argument(
         "-V", "--version",
@@ -64,6 +59,9 @@ def main() -> None:
         help="resume from a previous device registry backup (must specify the `-o` option)"
     )
     args = parser.parse_args()
+
+    if sys.platform != REQUIRE_PLATFORM:
+        raise RuntimeError("You must run this programme on Linux.")
 
     if args.verbose == 1:
         log_level = logging.INFO
