@@ -88,22 +88,22 @@ class Sniffer(object):
         Display the contents of the registry.
         """
         if len(self.registry) > 0:
-            self._log.info("Registry Status:\n{}".format("\n\n".join(str(d) for d in self.registry.values())))
+            self._log.info("Registry Status:\n{}".format("\n\n".join(str(d) for d in self.registry)))
 
         return True
 
     def _register_device(self, device):
-        for d in self.registry.values():
+        for d in self.registry:
             if device == d:
                 self._log.debug("Updating an existing device.")
                 d.update_from_device(device)
                 return
         else:
             self._log.debug("Adding a new device.")
-            self.registry[list(device.paths)[0]] = device
+            self.registry.append(device)
 
     def _find_device_by_path(self, path):
-        for d in self.registry.values():
+        for d in self.registry:
             if path in d.paths:
                 return d
 
@@ -119,7 +119,7 @@ class Sniffer(object):
             with self.output_path.open("rb") as f:
                 self.registry = pickle.load(f)
         else:
-            self.registry = dict()
+            self.registry = list()
 
     def __enter__(self):
         self._log.debug("Choosing the first available Bluetooth adapter and "
