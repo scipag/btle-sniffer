@@ -1630,6 +1630,6 @@ def uuid_to_string(uuid):
     else:
         if uuid.endswith("-0000-1000-8000-00805f9b34fb"):
             uuid_service = int(uuid[:8], 16)
-            return ALL_16BIT_UUIDS.get(uuid_service, "Unknown service")
+            return ALL_16BIT_UUIDS.get(uuid_service, None)
         else:
-            return "Vendor-specific characteristic or service"
+            return None
