@@ -7,7 +7,8 @@ Provides the Device abstraction of a Bluetooth device akin to org.bluez.Device1.
 import datetime
 from typing import Dict, Any, Optional, Sequence
 
-from .hci_constants import CompanyId
+from .hci_constants import CompanyId, uuid_to_string
+
 
 class Device(object):
     @classmethod
@@ -30,9 +31,9 @@ class Device(object):
 
     def update_from_dbus_dict(self, path: str, data: Dict[str, Any]) -> None:
         self.last_seen = datetime.datetime.now()
-        self.paths.add(path)
+        self.path = path
         if "Address" in data:
-            self.addresses.add(data["Address"])
+            self.address = data["Address"]
         if "Paired" in data:
             self.paired = data["Paired"]
         if "Connected" in data:
@@ -58,6 +59,7 @@ class Device(object):
                 else:
                     self.manufacturer_data[k] = [v]
         if "ServiceData" in data:
+            self.services = self.services.union(data["ServiceData"].keys())
             for k, v in data["ServiceData"].items():
                 if k in self.service_data:
                     self.service_data[k].append(v)
@@ -65,8 +67,8 @@ class Device(object):
                     self.service_data[k] = [v]
 
     def update_from_device(self, device: "Device") -> None:
-        self.paths |= device.paths
-        self.addresses |= device.addresses
+        self.path = device.path
+        self.address = device.address
         self.paired |= device.paired
         self.connected |= device.connected
         self.services_resolved |= device.services_resolved
@@ -81,16 +83,25 @@ class Device(object):
         if device.tx_power is not None:
             self.tx_power = device.tx_power
         self.last_seen = device.last_seen
+        self.services = self.services.union(device.services)
+        self.services = self.services.union(device.service_data.keys())
         for k, v in device.manufacturer_data.items():
             if k in self.manufacturer_data:
                 self.manufacturer_data[k].extend(v)
             else:
                 self.manufacturer_data[k] = v
+
         for k, v in device.service_data.items():
             if k in self.service_data:
                 self.service_data[k].extend(v)
             else:
                 self.service_data[k] = v
+
+    def mark_inactive(self):
+        self.active = False
+
+    def add_service(self, service):
+        self.uuids.add(service)
 
     def __init__(self,
                  path: str, address: str,
@@ -100,8 +111,9 @@ class Device(object):
                  rssi: int = None, tx_power: int = None,
                  manufacturer_data: Dict[int, Sequence[int]] = None,
                  service_data: Dict[str, Sequence[int]] = None) -> None:
-        self.paths = {path}
-        self.addresses = {address}
+        self.active = True
+        self.path = path
+        self.address = address
         self.paired = paired
         self.connected = connected
         self.services_resolved = services_resolved
@@ -113,6 +125,7 @@ class Device(object):
         self.tx_power = tx_power
         self.first_seen = datetime.datetime.now()
         self.last_seen = datetime.datetime.now()
+        self.services = set()
 
         self.manufacturer_data = dict()
         if manufacturer_data is not None:
@@ -121,54 +134,70 @@ class Device(object):
 
         self.service_data = dict()
         if service_data is not None:
+            self.services = self.services.union(service_data.keys())
             for k, v in service_data.items():
                 self.service_data[k] = [v]
 
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, Device):
-            shared_addrs = len(self.addresses & other.addresses) > 0
+            shared_addrs = self.address == other.address
             same_name = self.name is not None and self.name == other.name
             same_class = self.device_class is not None and self.device_class == other.device_class
             same_appearance = self.appearance is not None and self.appearance == other.appearance
             same_vendors = len(self.manufacturer_data) > 0 and self.manufacturer_data.keys() == other.manufacturer_data.keys()
             same_services = len(self.service_data) > 0 and self.service_data.keys() == other.service_data.keys()
-            return (shared_addrs or same_name or same_class or same_appearance) and (same_vendors or same_services)
+            # return (shared_addrs or same_name or same_class or same_appearance) and (same_vendors or same_services)
+            return shared_addrs
         else:
             return NotImplemented
 
-    def __repr__(self) -> str:
-        return "{}{}".format(self.__class__.__name__, (
-            self.paths, self.addresses, self.paired, self.connected,
-            self.services_resolved, self.name, self.device_class,
-            self.appearance, self.uuids, self.rssis, self.tx_power,
-            self.first_seen, self.last_seen,
-            self.manufacturer_data, self.service_data
-        ))
-
     def __str__(self) -> str:
         name = self.name if self.name is not None else "Unknown"
-        device_class = self.device_class if self.device_class is not None else "Unknown"
-        appearance = self.appearance if self.appearance is not None else "Unknown"
-        num_man_fac_pkts = sum(len(v) for v in self.manufacturer_data.values())
+        rssi = self.rssis[-1] if len(self.rssis) > 0 else -120
         vendors = list()
         for k in self.manufacturer_data.keys():
             try:
                 vendors.append(CompanyId(k).name)
             except ValueError:
                 vendors.append(str(k))
+        if len(vendors) > 0:
+            vendor_str = "; Vendors: {}".format(", ".join(vendors))
+        else:
+            vendor_str = ""
 
-        return "Device:\n" \
-               "  Adresses: {},\n" \
-               "  Paired: {}, Connected: {},\n" \
-               "  Name: {}, Device Class: {}, Appearance: {}\n" \
-               "  Number of Services: {}, Services Resolved: {}\n" \
-               "  First Seen: {}, Last Seen: {}\n" \
-               "  RSSI: {},\n" \
-               "  Manufacturer Data Packets: {}, Known Vendors: {},\n" \
-               "  Service Data: {}".format(
-            self.addresses, self.paired, self.connected,
-            name, device_class, appearance, len(self.uuids),
-            self.services_resolved, self.first_seen.isoformat(), self.last_seen.isoformat(),
-            self.rssis[-1], num_man_fac_pkts, ", ".join(vendors), self.service_data)
+        services = list()
+        for u in self.services:
+            text = uuid_to_string(u)
+            if text is not None:
+                services.append(text)
+        if len(services) > 0:
+            service_str = "; Services: {}".format(", ".join(services))
+        else:
+            service_str = ""
 
+        return "{}; {} ({} dBa){}{}".format(
+            name, self.address, rssi, vendor_str, service_str
+        )
+
+        # return "Device:\n" \
+        #        "  Active: {}, Adresses: {},\n" \
+        #        "  Paired: {}, Connected: {},\n" \
+        #        "  Name: {}, Device Class: {}, Appearance: {}\n" \
+        #        "  First Seen: {}, Last Seen: {}\n" \
+        #        "  RSSI: {},\n" \
+        #        "  Manufacturer Data Packets: {}, Known Vendors: {},\n" \
+        #        "  Known Services or Characteristics: {}".format(
+        #     self.active,
+        #     self.addresses, self.paired, self.connected,
+        #     name, device_class, appearance, self.first_seen.isoformat(),
+        #     self.last_seen.isoformat(), rssi, num_man_fac_pkts,
+        #     ", ".join(vendors), ", ".join(uuids))
+
+
+def print_device(device, prefix=None):
+    if device.active:
+        if prefix is not None:
+            print("{}: {!s}".format(prefix, device))
+        else:
+            print("{!s}".format(device))
 

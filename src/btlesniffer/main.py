@@ -58,6 +58,11 @@ def main() -> None:
         action="store_true",
         help="resume from a previous device registry backup (must specify the `-o` option)"
     )
+    parser.add_argument(
+        "--connect",
+        action="store_true",
+        help="attempt to connect to all discovered Bluetooth devices"
+    )
     args = parser.parse_args()
 
     if sys.platform != REQUIRE_PLATFORM:
@@ -77,7 +82,7 @@ def main() -> None:
     else:
         backup_path = None
 
-    with Sniffer(backup_path, args.backup_frequency, 30, args.resume) as sniffer:
+    with Sniffer(backup_path, args.backup_frequency, args.resume, args.connect) as sniffer:
         sniffer.run()
 
 
