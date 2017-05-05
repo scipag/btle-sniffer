@@ -13,6 +13,7 @@ ADAPTER_INTERFACE = "{}.Adapter1".format(SERVICE_NAME)
 DEVICE_INTERFACE = "{}.Device1".format(SERVICE_NAME)
 GATT_SERVICE_INTERFACE = "{}.GattService1".format(SERVICE_NAME)
 GATT_CHARACTERISTIC_INTERFACE = "{}.GattCharacteristic1".format(SERVICE_NAME)
+GATT_DESCRIPTOR_INTERFACE = "{}.GattDescriptor1".format(SERVICE_NAME)
 OBJECT_MANAGER_INTERFACE = "org.freedesktop.DBus.ObjectManager"
 PROPERTIES_INTERFACE = "org.freedesktop.DBus.Properties"
 
@@ -63,7 +64,9 @@ def find_device_in_objects(objects, device_address, adapter_pattern=None):
             if device.Address == device_address and path.startswith(path_prefix):
                 return bus.get(SERVICE_NAME, path)[DEVICE_INTERFACE]
     else:
-        raise BlueZDBusException("Bluetooth device '{}' not found.".format(device_address))
+        raise BlueZDBusException(
+            "Bluetooth device '{}' not found.".format(device_address)
+        )
 
 
 def find_adapter(pattern=None):
@@ -79,5 +82,30 @@ def find_device(device_address, adapter_pattern=None):
     Find the Device interface specified by the given address and the
     corresponding adapter pattern.
     """
-    return find_device_in_objects(get_managed_objects(), device_address, adapter_pattern)
+    return find_device_in_objects(
+        get_managed_objects(), device_address, adapter_pattern
+    )
 
+
+def get_known_devices():
+    """
+    Using the DBus ObjectManager, yield all known Devices.
+    """
+    bus = pydbus.SystemBus()
+    manager = bus.get(SERVICE_NAME, "/")[OBJECT_MANAGER_INTERFACE]
+    objs = manager.GetManagedObjects()
+    for path, ifaces in objs.items():
+        if DEVICE_INTERFACE in ifaces.keys():
+            yield (path, ifaces[DEVICE_INTERFACE])
+
+
+def get_known_services():
+    """
+    Using the DBus ObjectManager, yield all known GATT services.
+    """
+    bus = pydbus.SystemBus()
+    manager = bus.get(SERVICE_NAME, "/")[OBJECT_MANAGER_INTERFACE]
+    objs = manager.GetManagedObjects()
+    for path, ifaces in objs.items():
+        if GATT_SERVICE_INTERFACE in ifaces.keys():
+            yield (path, ifaces[GATT_SERVICE_INTERFACE])
