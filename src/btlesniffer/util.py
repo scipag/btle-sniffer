@@ -11,6 +11,8 @@ import pydbus
 SERVICE_NAME = "org.bluez"
 ADAPTER_INTERFACE = "{}.Adapter1".format(SERVICE_NAME)
 DEVICE_INTERFACE = "{}.Device1".format(SERVICE_NAME)
+GATT_SERVICE_INTERFACE = "{}.GattService1".format(SERVICE_NAME)
+GATT_CHARACTERISTIC_INTERFACE = "{}.GattCharacteristic1".format(SERVICE_NAME)
 OBJECT_MANAGER_INTERFACE = "org.freedesktop.DBus.ObjectManager"
 PROPERTIES_INTERFACE = "org.freedesktop.DBus.Properties"
 
