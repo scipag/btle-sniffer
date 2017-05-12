@@ -53,7 +53,7 @@ class Sniffer(object):
             )
 
             self._log.debug("Running the main loop.")
-            if self.output_path is not None:
+            if self.output_path is not None and self.backup_interval > 0:
                 GLib.timeout_add_seconds(self.backup_interval, self._cb_backup_registry)
             loop = GLib.MainLoop()
             loop.run()
@@ -93,6 +93,8 @@ class Sniffer(object):
             device = self._find_device_by_path(obj)
             if device is not None:
                 device.update_from_dbus_dict(obj, params[1])
+                if self.backup_interval == 0:
+                    self._cb_backup_registry()
             else:
                 self._log.debug("Received PropertiesChanged for an "
                                 "unknown device.")
@@ -119,6 +121,9 @@ class Sniffer(object):
             if self.attempt_connection:
                 self._connect(device)
             print_device(device, "New")
+
+        if self.backup_interval == 0:
+            self._cb_backup_registry()
 
     def _register_service(self, path, service):
         device_path = service["Device"]

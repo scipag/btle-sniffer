@@ -48,18 +48,21 @@ def main() -> None:
         help="path to the device registry backup"
     )
     parser.add_argument(
-        "--backup-frequency",
+        "-f", "--backup-frequency",
         type=int,
         default=5,
-        help="how frequently the device registry backup should be written (in seconds)"
+        help="how frequently the device registry backup should be written "
+             "(in seconds, default 5). If set to zero, it the backup will "
+             "be written with every device update."
     )
     parser.add_argument(
-        "--resume",
+        "-r", "--resume",
         action="store_true",
-        help="resume from a previous device registry backup (must specify the `-o` option)"
+        help="resume from a previous device registry backup (must specify "
+             "the `-o` option)"
     )
     parser.add_argument(
-        "--connect",
+        "-c", "--connect",
         action="store_true",
         help="attempt to connect to all discovered Bluetooth devices"
     )
@@ -82,8 +85,11 @@ def main() -> None:
     else:
         backup_path = None
 
-    with Sniffer(backup_path, args.backup_frequency, args.resume, args.connect) as sniffer:
-        sniffer.run()
+    try:
+        with Sniffer(backup_path, args.backup_frequency, args.resume, args.connect) as sniffer:
+            sniffer.run()
+    except KeyboardInterrupt:
+        pass
 
 
 if __name__ == "__main__":
