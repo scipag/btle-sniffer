@@ -101,7 +101,7 @@ class Device(object):
         self.active = False
 
     def add_service(self, service):
-        self.uuids.add(service)
+        self.services.add(service)
 
     def __init__(self,
                  path: str, address: str,
@@ -140,14 +140,7 @@ class Device(object):
 
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, Device):
-            shared_addrs = self.address == other.address
-            same_name = self.name is not None and self.name == other.name
-            same_class = self.device_class is not None and self.device_class == other.device_class
-            same_appearance = self.appearance is not None and self.appearance == other.appearance
-            same_vendors = len(self.manufacturer_data) > 0 and self.manufacturer_data.keys() == other.manufacturer_data.keys()
-            same_services = len(self.service_data) > 0 and self.service_data.keys() == other.service_data.keys()
-            # return (shared_addrs or same_name or same_class or same_appearance) and (same_vendors or same_services)
-            return shared_addrs
+            return self.address == other.address
         else:
             return NotImplemented
 
@@ -179,25 +172,9 @@ class Device(object):
             name, self.address, rssi, vendor_str, service_str
         )
 
-        # return "Device:\n" \
-        #        "  Active: {}, Adresses: {},\n" \
-        #        "  Paired: {}, Connected: {},\n" \
-        #        "  Name: {}, Device Class: {}, Appearance: {}\n" \
-        #        "  First Seen: {}, Last Seen: {}\n" \
-        #        "  RSSI: {},\n" \
-        #        "  Manufacturer Data Packets: {}, Known Vendors: {},\n" \
-        #        "  Known Services or Characteristics: {}".format(
-        #     self.active,
-        #     self.addresses, self.paired, self.connected,
-        #     name, device_class, appearance, self.first_seen.isoformat(),
-        #     self.last_seen.isoformat(), rssi, num_man_fac_pkts,
-        #     ", ".join(vendors), ", ".join(uuids))
-
 
 def print_device(device, prefix=None):
-    if device.active:
-        if prefix is not None:
-            print("{}: {!s}".format(prefix, device))
-        else:
-            print("{!s}".format(device))
-
+    if prefix is not None:
+        print("{}: {!s}".format(prefix, device))
+    else:
+        print("{!s}".format(device))
