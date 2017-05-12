@@ -22,7 +22,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="btlesniffer",
         description="Scan for Bluetooth Low Energy devices and gather "
-                    "information about them. This program will only run on"
+                    "information about them. This program will only run on "
                     "Linux systems and will require root permissions."
     )
     parser.add_argument(

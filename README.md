@@ -17,7 +17,7 @@ You can now use `pip` or `setuptools` to install the package:
                        [-r] [-c]
 
     Scan for Bluetooth Low Energy devices and gather information about them. This
-    program will only run onLinux systems and will require root permissions.
+    program will only run on Linux systems and will require root permissions.
 
     optional arguments:
       -h, --help            show this help message and exit
