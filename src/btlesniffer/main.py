@@ -52,7 +52,7 @@ def main() -> None:
         type=int,
         default=5,
         help="how frequently the device registry backup should be written "
-             "(in seconds, default 5). If set to zero, it the backup will "
+             "(in seconds, default 5). If set to zero, the backup will "
              "be written with every device update."
     )
     parser.add_argument(
