@@ -113,7 +113,7 @@ class Sniffer(object):
             d.update_from_device(device)
             if self.attempt_connection:
                 self._connect(d)
-            print_device(d, "Update")
+            print_device(d, "Merge")
         else:
             self.registry.append(device)
             if self.attempt_connection:
