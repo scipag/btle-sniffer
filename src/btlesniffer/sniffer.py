@@ -13,7 +13,7 @@ from gi.repository import GLib
 
 from .util import SERVICE_NAME, DEVICE_INTERFACE, OBJECT_MANAGER_INTERFACE, \
     PROPERTIES_INTERFACE, find_adapter, GATT_SERVICE_INTERFACE, \
-    GATT_CHARACTERISTIC_INTERFACE, get_known_devices
+    GATT_CHARACTERISTIC_INTERFACE, GATT_DESCRIPTOR_INTERFACE, get_known_devices
 from .device import Device, print_device
 
 
@@ -70,6 +70,8 @@ class Sniffer(object):
         (path, interfaces) = params
         if DEVICE_INTERFACE in interfaces:
             self._register_device(Device.create_from_dbus_dict(path, interfaces[DEVICE_INTERFACE]))
+        if GATT_SERVICE_INTERFACE in interfaces:
+            self._register_service(path, interfaces[GATT_SERVICE_INTERFACE])
 
     def _cb_interfaces_removed(self, sender, obj, iface, signal, params):
         """
@@ -87,11 +89,13 @@ class Sniffer(object):
         Upon receiving the PropertiesChanged signal, update previously
         registered devices.
         """
-        # self._log.debug("Caught the signal PropertiesChanged.")
         if DEVICE_INTERFACE in params:
             device = self._find_device_by_path(obj)
             if device is not None:
                 device.update_from_dbus_dict(obj, params[1])
+            else:
+                self._log.debug("Received PropertiesChanged for an "
+                                "unknown device.")
 
     def _cb_backup_registry(self):
         """
@@ -118,7 +122,10 @@ class Sniffer(object):
     def _register_service(self, path, service):
         device_path = service["Device"]
         device = self._find_device_by_path(device_path)
-        device.add_service(service["UUID"])
+        if device is not None:
+            print_device(device, "Update")
+        else:
+            self._log.debug("Received a service for an unknown device.")
 
     def _connect(self, device):
         print_device(device, "Connecting")

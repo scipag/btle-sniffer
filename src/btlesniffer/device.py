@@ -5,9 +5,45 @@ Provides the Device abstraction of a Bluetooth device akin to org.bluez.Device1.
 """
 
 import datetime
-from typing import Dict, Any, Optional, Sequence
+from typing import Dict, Any, Optional, Sequence, MutableMapping
 
 from .hci_constants import CompanyId, uuid_to_string
+
+
+class GATTDescriptor(object):
+    def __init__(self, uuid: str, value: Optional[Sequence[int]],
+                 flags: Sequence[str]):
+        self.uuid = uuid
+        self.value = value
+        self.flags = flags
+
+
+class GATTCharacteristic(object):
+    def __init__(self, uuid: str, value: Optional[Sequence[int]],
+                 flags: Sequence[str]):
+        self.uuid = uuid
+        self.value = value
+        self.flags = flags
+        self.descriptors: MutableMapping[str, GATTDescriptor] = dict()
+
+    def __getitem__(self, path: str) -> GATTDescriptor:
+        return self.descriptors[path]
+
+    def __setitem__(self, path: str, descriptor: GATTDescriptor):
+        self.descriptors[path] = descriptor
+
+
+class GATTService(object):
+    def __init__(self, uuid: str, primary: bool):
+        self.uuid = uuid
+        self.primary = primary
+        self.characteristics: MutableMapping[str, GATTCharacteristic] = dict()
+
+    def __getitem__(self, path: str) -> GATTCharacteristic:
+        return self.characteristics[path]
+
+    def __setitem__(self, path: str, characteristic: GATTCharacteristic):
+        self.characteristics[path] = characteristic
 
 
 class Device(object):
@@ -59,7 +95,7 @@ class Device(object):
                 else:
                     self.manufacturer_data[k] = [v]
         if "ServiceData" in data:
-            self.services = self.services.union(data["ServiceData"].keys())
+            self.uuids = self.uuids.union(data["ServiceData"].keys())
             for k, v in data["ServiceData"].items():
                 if k in self.service_data:
                     self.service_data[k].append(v)
@@ -79,12 +115,11 @@ class Device(object):
         if device.appearance is not None:
             self.appearance = device.appearance
         self.uuids |= device.uuids
+        self.uuids = self.uuids.union(device.service_data.keys())
         self.rssis.extend(device.rssis)
         if device.tx_power is not None:
             self.tx_power = device.tx_power
         self.last_seen = device.last_seen
-        self.services = self.services.union(device.services)
-        self.services = self.services.union(device.service_data.keys())
         for k, v in device.manufacturer_data.items():
             if k in self.manufacturer_data:
                 self.manufacturer_data[k].extend(v)
@@ -99,9 +134,6 @@ class Device(object):
 
     def mark_inactive(self):
         self.active = False
-
-    def add_service(self, service):
-        self.services.add(service)
 
     def __init__(self,
                  path: str, address: str,
@@ -125,7 +157,7 @@ class Device(object):
         self.tx_power = tx_power
         self.first_seen = datetime.datetime.now()
         self.last_seen = datetime.datetime.now()
-        self.services = set()
+        self.services: MutableMapping[str, GATTService] = dict()
 
         self.manufacturer_data = dict()
         if manufacturer_data is not None:
@@ -134,7 +166,7 @@ class Device(object):
 
         self.service_data = dict()
         if service_data is not None:
-            self.services = self.services.union(service_data.keys())
+            self.uuids = self.uuids.union(service_data.keys())
             for k, v in service_data.items():
                 self.service_data[k] = [v]
 
@@ -158,19 +190,25 @@ class Device(object):
         else:
             vendor_str = ""
 
-        services = list()
-        for u in self.services:
+        uuids = list()
+        for u in self.uuids:
             text = uuid_to_string(u)
             if text is not None:
-                services.append(text)
-        if len(services) > 0:
-            service_str = "; Services: {}".format(", ".join(services))
+                uuids.append(text)
+        if len(uuids) > 0:
+            uuid_str = "; Services: {}".format(", ".join(uuids))
         else:
-            service_str = ""
+            uuid_str = ""
 
         return "{}; {} ({} dBa){}{}".format(
-            name, self.address, rssi, vendor_str, service_str
+            name, self.address, rssi, vendor_str, uuid_str
         )
+
+    def __getitem__(self, path: str) -> GATTService:
+        return self.services[path]
+
+    def __setitem__(self, path: str, service: GATTService):
+        self.services[path] = service
 
 
 def print_device(device, prefix=None):
