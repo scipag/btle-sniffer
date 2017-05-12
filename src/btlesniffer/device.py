@@ -73,7 +73,7 @@ class Device(object):
         if "Paired" in data:
             self.paired = data["Paired"]
         if "Connected" in data:
-            self.connected = data["Connected"]
+            self.connected |= data["Connected"]
         if "ServicesResolved" in data:
             self.services_resolved = data["ServicesResolved"]
         if "Name" in data:
@@ -131,9 +131,6 @@ class Device(object):
                 self.service_data[k].extend(v)
             else:
                 self.service_data[k] = v
-
-    def mark_inactive(self):
-        self.active = False
 
     def __init__(self,
                  path: str, address: str,
@@ -204,10 +201,14 @@ class Device(object):
             name, self.address, rssi, vendor_str, uuid_str
         )
 
+    def __repr__(self):
+        return "<{!s}>".format(self)
+
     def __getitem__(self, path: str) -> GATTService:
         return self.services[path]
 
     def __setitem__(self, path: str, service: GATTService):
+        self.uuids.add(service.uuid)
         self.services[path] = service
 
 

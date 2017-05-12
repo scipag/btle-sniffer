@@ -14,7 +14,7 @@ from gi.repository import GLib
 from .util import SERVICE_NAME, DEVICE_INTERFACE, OBJECT_MANAGER_INTERFACE, \
     PROPERTIES_INTERFACE, find_adapter, GATT_SERVICE_INTERFACE, \
     GATT_CHARACTERISTIC_INTERFACE, GATT_DESCRIPTOR_INTERFACE, get_known_devices
-from .device import Device, print_device
+from .device import GATTService, Device, print_device
 
 
 class Sniffer(object):
@@ -82,7 +82,7 @@ class Sniffer(object):
         (path, ifaces) = params
         device = self._find_device_by_path(path)
         if device is not None:
-            device.mark_inactive()
+            device.active = False
 
     def _cb_properties_changed(self, sender, obj, iface, signal, params):
         """
@@ -108,37 +108,41 @@ class Sniffer(object):
         return True
 
     def _register_device(self, device):
-        if self.attempt_connection:
-            self._connect(device)
-
         d = self._find_device(device)
         if d is not None:
             d.update_from_device(device)
+            if self.attempt_connection:
+                self._connect(d)
             print_device(d, "Update")
         else:
             self.registry.append(device)
+            if self.attempt_connection:
+                self._connect(device)
             print_device(device, "New")
 
     def _register_service(self, path, service):
         device_path = service["Device"]
         device = self._find_device_by_path(device_path)
         if device is not None:
+            device[path] = GATTService(service["UUID"], service["Primary"])
             print_device(device, "Update")
         else:
             self._log.debug("Received a service for an unknown device.")
 
     def _connect(self, device):
-        print_device(device, "Connecting")
-        bus = pydbus.SystemBus()
-        proxy = bus.get(SERVICE_NAME, device.path)
-        try:
-            proxy.Connect()
-        except GLib.Error:
-            self._log.debug("Failed to connect:", exc_info=True)
-        except KeyError:
-            self._log.warning("Something went wrong with the PyDbus proxy object.", exc_info=True)
-        else:
-            self._log.info("Successfully connected.")
+        if not device.connected:
+            device.connected = True
+            print_device(device, "Connecting")
+            def cb_connect():
+                bus = pydbus.SystemBus()
+                proxy = bus.get(SERVICE_NAME, device.path)
+                try:
+                    proxy.Connect()
+                except KeyError:
+                    self._log.exception("Something is wrong with pydbus.")
+                except GLib.Error:
+                    self._log.debug("Connect() failed:", exc_info=True)
+            GLib.idle_add(cb_connect)
 
     def _find_device(self, device):
         for d in self.registry:
@@ -150,7 +154,7 @@ class Sniffer(object):
             if path == d.path:
                 return d
 
-    def __init__(self, output_path=None, backup_interval=60, resume=False, attempt_connection=False):
+    def __init__(self, output_path=None, backup_interval=5, resume=False, attempt_connection=False):
         self.output_path = output_path
         self.backup_interval = backup_interval
         self.attempt_connection = attempt_connection

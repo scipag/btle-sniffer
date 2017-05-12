@@ -50,7 +50,7 @@ def main() -> None:
     parser.add_argument(
         "--backup-frequency",
         type=int,
-        default=60,
+        default=5,
         help="how frequently the device registry backup should be written (in seconds)"
     )
     parser.add_argument(
