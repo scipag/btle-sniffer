@@ -14,7 +14,8 @@ from gi.repository import GLib
 from .util import SERVICE_NAME, DEVICE_INTERFACE, OBJECT_MANAGER_INTERFACE, \
     PROPERTIES_INTERFACE, find_adapter, GATT_SERVICE_INTERFACE, \
     GATT_CHARACTERISTIC_INTERFACE, GATT_DESCRIPTOR_INTERFACE, get_known_devices
-from .device import GATTService, Device, print_device
+from .device import GATTService, GATTCharacteristic, GATTDescriptor, Device, \
+    print_device
 
 
 class Sniffer(object):
@@ -74,6 +75,10 @@ class Sniffer(object):
             self._register_device(Device.create_from_dbus_dict(path, interfaces[DEVICE_INTERFACE]))
         if GATT_SERVICE_INTERFACE in interfaces:
             self._register_service(path, interfaces[GATT_SERVICE_INTERFACE])
+        if GATT_CHARACTERISTIC_INTERFACE in interfaces:
+            self._register_characteristic(path, interfaces[GATT_CHARACTERISTIC_INTERFACE])
+        if GATT_DESCRIPTOR_INTERFACE in interfaces:
+            self._register_descriptor(path, interfaces[GATT_DESCRIPTOR_INTERFACE])
 
     def _cb_interfaces_removed(self, sender, obj, iface, signal, params):
         """
@@ -85,6 +90,7 @@ class Sniffer(object):
         device = self._find_device_by_path(path)
         if device is not None:
             device.active = False
+            print_device(device, "Lost")
 
     def _cb_properties_changed(self, sender, obj, iface, signal, params):
         """
@@ -139,9 +145,42 @@ class Sniffer(object):
         else:
             self._log.debug("Received a service for an unknown device.")
 
+    def _register_characteristic(self, path, characteristic):
+        service_path = characteristic["Service"]
+        device_path = "/".join(service_path.split("/")[:-1])
+        device = self._find_device_by_path(device_path)
+        if device is not None:
+            if service_path in device.services:
+                device[service_path][path] = GATTCharacteristic(
+                    characteristic["UUID"], characteristic.get("Value"),
+                    characteristic["Flags"]
+                )
+                print_device(device, "Characteristic")
+            else:
+                self._log.debug("Received a characteristic for an unknown service.")
+        else:
+            self._log.debug("Received a characteristic for an unknown device.")
+
+    def _register_descriptor(self, path, descriptor):
+        characteristic_path = descriptor["Characteristic"]
+        service_path = "/".join(characteristic_path.split("/")[:-1])
+        device_path = "/".join(service_path.split("/")[:-1])
+        device = self._find_device_by_path(device_path)
+        if device is not None:
+            if service_path in device.services:
+                if characteristic_path in device[service_path].characteristics:
+                    device[service_path][characteristic_path][path] = GATTDescriptor(
+                        descriptor["UUID"], descriptor.get("Value"), descriptor.get("Flags")
+                    )
+                    print_device(device, "Descriptor")
+                else:
+                    self._log.debug("Received a descriptor for an unknown characteristic.")
+            else:
+                self._log.debug("Received a descriptor for an unknown service.")
+        else:
+            self._log.debug("Received a descriptor for an unknown device.")
+
     def _connect(self, device):
-        device.connected = True
-        print_device(device, "Connecting")
         def cb_connect():
             try:
                 bus = pydbus.SystemBus()
@@ -151,7 +190,16 @@ class Sniffer(object):
                 self._log.debug("The device has likely disappeared.", exc_info=True)
             except GLib.Error:
                 self._log.debug("Connect() failed:", exc_info=True)
-        GLib.idle_add(cb_connect)
+            else:
+                self._log.info("Connection successful.")
+
+            self.queued_connections -= 1
+
+        if self.queued_connections == 0:
+            print_device(device, "Connecting")
+            GLib.idle_add(cb_connect)
+            device.connected = True
+            self.queued_connections += 1
 
     def _find_device(self, device):
         for d in self.registry:
@@ -168,6 +216,7 @@ class Sniffer(object):
         self.backup_interval = backup_interval
         self.attempt_connection = attempt_connection
         self.adapter = None
+        self.queued_connections = 0
         self._log = logging.getLogger("btlesniffer.Sniffer")
 
         if resume and self.output_path is not None and self.output_path.exists():

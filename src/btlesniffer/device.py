@@ -12,10 +12,19 @@ from .hci_constants import CompanyId, uuid_to_string
 
 class GATTDescriptor(object):
     def __init__(self, uuid: str, value: Optional[Sequence[int]],
-                 flags: Sequence[str]):
+                 flags: Optional[Sequence[str]]):
         self.uuid = uuid
         self.value = value
         self.flags = flags
+
+    def __str__(self):
+        name = uuid_to_string(self.uuid)
+        if name is None:
+            name = "Unknown"
+        return "{} = {}".format(name, self.value)
+
+    def __repr__(self):
+        return "<{!s}>".format(self)
 
 
 class GATTCharacteristic(object):
@@ -25,6 +34,15 @@ class GATTCharacteristic(object):
         self.value = value
         self.flags = flags
         self.descriptors: MutableMapping[str, GATTDescriptor] = dict()
+
+    def __str__(self):
+        name = uuid_to_string(self.uuid)
+        if name is None:
+            name = "Unknown"
+        return "{} = {} ({}) - {}".format(name, self.value, self.flags, ", ".join(str(d) for d in self.descriptors.values()))
+
+    def __repr__(self):
+        return "<{!s}>".format(self)
 
     def __getitem__(self, path: str) -> GATTDescriptor:
         return self.descriptors[path]
@@ -38,6 +56,15 @@ class GATTService(object):
         self.uuid = uuid
         self.primary = primary
         self.characteristics: MutableMapping[str, GATTCharacteristic] = dict()
+
+    def __str__(self):
+        name = uuid_to_string(self.uuid)
+        if name is None:
+            name = "Unknown"
+        return "{}: {}".format(name, ", ".join(str(c) for c in self.characteristics.values()))
+
+    def __repr__(self):
+        return "<{!s}>".format(self)
 
     def __getitem__(self, path: str) -> GATTCharacteristic:
         return self.characteristics[path]
