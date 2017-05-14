@@ -55,6 +55,8 @@ class Sniffer(object):
             self._log.debug("Running the main loop.")
             if self.output_path is not None and self.backup_interval > 0:
                 GLib.timeout_add_seconds(self.backup_interval, self._cb_backup_registry)
+            if self.attempt_connection:
+                GLib.timeout_add_seconds(5, self._cb_connect_check)
             loop = GLib.MainLoop()
             loop.run()
         else:
@@ -109,17 +111,20 @@ class Sniffer(object):
 
         return True
 
+    def _cb_connect_check(self):
+        for device in self.registry:
+            if not device.connected:
+                self._connect(device)
+
+        return True
+
     def _register_device(self, device):
         d = self._find_device(device)
         if d is not None:
             d.update_from_device(device)
-            if self.attempt_connection:
-                self._connect(d)
             print_device(d, "Merge")
         else:
             self.registry.append(device)
-            if self.attempt_connection:
-                self._connect(device)
             print_device(device, "New")
 
         if self.backup_interval == 0:
@@ -135,19 +140,18 @@ class Sniffer(object):
             self._log.debug("Received a service for an unknown device.")
 
     def _connect(self, device):
-        if not device.connected:
-            device.connected = True
-            print_device(device, "Connecting")
-            def cb_connect():
+        device.connected = True
+        print_device(device, "Connecting")
+        def cb_connect():
+            try:
                 bus = pydbus.SystemBus()
                 proxy = bus.get(SERVICE_NAME, device.path)
-                try:
-                    proxy.Connect()
-                except KeyError:
-                    self._log.exception("Something is wrong with pydbus.")
-                except GLib.Error:
-                    self._log.debug("Connect() failed:", exc_info=True)
-            GLib.idle_add(cb_connect)
+                proxy.Connect()
+            except KeyError:
+                self._log.debug("The device has likely disappeared.", exc_info=True)
+            except GLib.Error:
+                self._log.debug("Connect() failed:", exc_info=True)
+        GLib.idle_add(cb_connect)
 
     def _find_device(self, device):
         for d in self.registry:
