@@ -57,7 +57,7 @@ class Sniffer(object):
             if self.output_path is not None and self.backup_interval > 0:
                 GLib.timeout_add_seconds(self.backup_interval, self._cb_backup_registry)
             if self.attempt_connection:
-                GLib.timeout_add_seconds(5, self._cb_connect_check)
+                GLib.timeout_add_seconds(self.connection_interval, self._cb_connect_check)
             loop = GLib.MainLoop()
             loop.run()
         else:
@@ -215,6 +215,7 @@ class Sniffer(object):
         self.output_path = output_path
         self.backup_interval = backup_interval
         self.attempt_connection = attempt_connection
+        self.connection_interval = 5
         self.adapter = None
         self.queued_connections = 0
         self._log = logging.getLogger("btlesniffer.Sniffer")
