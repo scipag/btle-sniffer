@@ -48,7 +48,7 @@ def main() -> None:
         help="path to the device registry backup"
     )
     parser.add_argument(
-        "-f", "--backup-frequency",
+        "-i", "--backup-interval",
         type=int,
         default=5,
         help="how frequently the device registry backup should be written "
@@ -86,7 +86,7 @@ def main() -> None:
         backup_path = None
 
     try:
-        with Sniffer(backup_path, args.backup_frequency, args.resume, args.connect) as sniffer:
+        with Sniffer(backup_path, args.backup_interval, args.resume, args.connect) as sniffer:
             sniffer.run()
     except KeyboardInterrupt:
         pass
