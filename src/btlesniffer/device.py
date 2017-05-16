@@ -94,6 +94,7 @@ class Device(object):
 
     def update_from_dbus_dict(self, path: str, data: Dict[str, Any]) -> None:
         self.last_seen = datetime.datetime.now()
+        self.active = True
         self.path = path
         if "Address" in data:
             self.address = data["Address"]
@@ -130,6 +131,7 @@ class Device(object):
                     self.service_data[k] = [v]
 
     def update_from_device(self, device: "Device") -> None:
+        self.active = device.active
         self.path = device.path
         self.address = device.address
         self.paired |= device.paired

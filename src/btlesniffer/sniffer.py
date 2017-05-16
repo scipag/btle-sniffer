@@ -57,7 +57,7 @@ class Sniffer(object):
             if self.output_path is not None and self.backup_interval > 0:
                 GLib.timeout_add_seconds(self.backup_interval, self._cb_backup_registry)
             if self.attempt_connection:
-                GLib.timeout_add_seconds(self.connection_interval, self._cb_connect_check)
+                GLib.timeout_add_seconds(self.queueing_interval, self._cb_connect_check)
             loop = GLib.MainLoop()
             loop.run()
         else:
@@ -119,7 +119,8 @@ class Sniffer(object):
 
     def _cb_connect_check(self):
         for device in self.registry:
-            if not device.connected:
+            if device.active and not device.connected \
+                    and device.rssis[-1] >= self.threshold_rssi:
                 self._connect(device)
 
         return True
@@ -211,13 +212,16 @@ class Sniffer(object):
             if path == d.path:
                 return d
 
-    def __init__(self, output_path=None, backup_interval=5, resume=False, attempt_connection=False):
+    def __init__(self, output_path=None, backup_interval=5, resume=False,
+                 attempt_connection=False, threshold_rssi=-80,
+                 queueing_interval=5):
         self.output_path = output_path
         self.backup_interval = backup_interval
         self.attempt_connection = attempt_connection
-        self.connection_interval = 5
-        self.adapter = None
+        self.threshold_rssi = threshold_rssi
+        self.queueing_interval = queueing_interval
         self.queued_connections = 0
+        self.adapter = None
         self._log = logging.getLogger("btlesniffer.Sniffer")
 
         if resume and self.output_path is not None and self.output_path.exists():

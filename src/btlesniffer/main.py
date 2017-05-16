@@ -52,7 +52,7 @@ def main() -> None:
         type=int,
         default=5,
         help="how frequently the device registry backup should be written "
-             "(in seconds, default 5). If set to zero, the backup will "
+             "(in seconds, default 5 s). If set to zero, the backup will "
              "be written with every device update."
     )
     parser.add_argument(
@@ -65,6 +65,20 @@ def main() -> None:
         "-c", "--connect",
         action="store_true",
         help="attempt to connect to all discovered Bluetooth devices"
+    )
+    parser.add_argument(
+        "--threshold-rssi",
+        type=int,
+        default=-80,
+        help="the lower bound received signal strength (RSSI) at which to "
+             "attempt to connect to devices (in dBa, default -80 dBa)."
+    )
+    parser.add_argument(
+        "--connection-polling-interval",
+        type=int,
+        default=5,
+        help="how frequently the sniffer shall go through the device registry "
+             "and attempt to establish connections (in seconds, default 5 s)."
     )
     args = parser.parse_args()
 
@@ -86,7 +100,9 @@ def main() -> None:
         backup_path = None
 
     try:
-        with Sniffer(backup_path, args.backup_interval, args.resume, args.connect) as sniffer:
+        with Sniffer(backup_path, args.backup_interval, args.resume,
+                     args.connect, args.threshold_rssi,
+                     args.connection_polling_interval) as sniffer:
             sniffer.run()
     except KeyboardInterrupt:
         pass

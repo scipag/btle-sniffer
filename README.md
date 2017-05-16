@@ -13,8 +13,9 @@ You can now use `pip` or `setuptools` to install the package:
 
 ## Usage
 
-    usage: btlesniffer [-h] [-V] [-v] [-d] [-o OUT_PATH] [-f BACKUP_FREQUENCY]
-                       [-r] [-c]
+    usage: btlesniffer [-h] [-V] [-v] [-d] [-o OUT_PATH] [-i BACKUP_INTERVAL] [-r]
+                       [-c] [--threshold-rssi THRESHOLD_RSSI]
+                       [--connection-polling-interval CONNECTION_POLLING_INTERVAL]
 
     Scan for Bluetooth Low Energy devices and gather information about them. This
     program will only run on Linux systems and will require root permissions.
@@ -28,8 +29,17 @@ You can now use `pip` or `setuptools` to install the package:
                             path to the device registry backup
       -i BACKUP_INTERVAL, --backup-interval BACKUP_INTERVAL
                             how frequently the device registry backup should be
-                            written (in seconds, default 5). If set to zero,
-                            the backup will be written with every device update.
+                            written (in seconds, default 5 s). If set to zero, the
+                            backup will be written with every device update.
       -r, --resume          resume from a previous device registry backup (must
                             specify the `-o` option)
       -c, --connect         attempt to connect to all discovered Bluetooth devices
+      --threshold-rssi THRESHOLD_RSSI
+                            the lower bound received signal strength (RSSI) at
+                            which to attempt to connect to devices (in dBa,
+                            default -80 dBa).
+      --connection-polling-interval CONNECTION_POLLING_INTERVAL
+                            how frequently the sniffer shall go through the device
+                            registry and attempt to establish connections (in
+                            seconds, default 5 s).
+
