@@ -26,7 +26,7 @@ You can now use `pip` or `setuptools` to install the package:
       -d, --debug           enable debugging features
       -o OUT_PATH, --out-path OUT_PATH
                             path to the device registry backup
-      -f BACKUP_FREQUENCY, --backup-frequency BACKUP_FREQUENCY
+      -i BACKUP_INTERVAL, --backup-interval BACKUP_INTERVAL
                             how frequently the device registry backup should be
                             written (in seconds, default 5). If set to zero,
                             the backup will be written with every device update.
