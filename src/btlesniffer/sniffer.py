@@ -230,10 +230,15 @@ class Sniffer(object):
     def __enter__(self):
         self._log.debug("Choosing the first available Bluetooth adapter and "
                         "starting device discovery.")
-        self.adapter = find_adapter()
         self._log.debug("The discovery filter is set to Bluetooth LE only.")
-        self.adapter.SetDiscoveryFilter({"Transport": pydbus.Variant("s", "le")})
-        self.adapter.StartDiscovery()
+        try:
+            self.adapter = find_adapter()
+            self.adapter.SetDiscoveryFilter({"Transport": pydbus.Variant("s", "le")})
+            self.adapter.StartDiscovery()
+        except GLib.Error as ex:
+            self._log.exception("Is the bluetooth controller powered on? "
+                                "Use `bluetoothctl`, `power on` otherwise.")
+            raise ex
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
