@@ -1,5 +1,7 @@
 # BTLE-Sniffer
-This is a simple Python 3.5+ utility for monitoring Bluetooth Low Energy traffic and to register devices.
+This is a simple Python 3.5+ utility for monitoring Bluetooth Low Energy 
+traffic and to register devices. Thanks to D-Bus, it does not require
+elevated privileges to be run!
 
 ## Dependencies
 As this project relies on BlueZ, it will only run on Linux
@@ -18,7 +20,7 @@ You can now use `pip` or `setuptools` to install the package:
                        [--connection-polling-interval CONNECTION_POLLING_INTERVAL]
 
     Scan for Bluetooth Low Energy devices and gather information about them. This
-    program will only run on Linux systems and will require root permissions.
+    program will only run on Linux systems.
 
     optional arguments:
       -h, --help            show this help message and exit

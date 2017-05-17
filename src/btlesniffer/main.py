@@ -23,7 +23,7 @@ def main() -> None:
         prog="btlesniffer",
         description="Scan for Bluetooth Low Energy devices and gather "
                     "information about them. This program will only run on "
-                    "Linux systems and will require root permissions."
+                    "Linux systems."
     )
     parser.add_argument(
         "-V", "--version",
