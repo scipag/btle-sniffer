@@ -11,7 +11,7 @@ python-gi, python-gobject or pygobject, but not packaged on PyPi) and D-Bus.
 ## Installing
 You can now use `pip` or `setuptools` to install the package:
 
-    $ pip install -U git+https://github.com/scipag/btle-sniffer.git
+    $ pip install -U git+https://github.com/seppomoj/btle-sniffer.git
 
 ## Usage
 
