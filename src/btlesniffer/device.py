@@ -242,7 +242,12 @@ class Device(object):
 
 
 def print_device(device, prefix=None):
+    print_timestamp
     if prefix is not None:
         print("{}: {!s}".format(prefix, device))
     else:
         print("{!s}".format(device))
+        
+def print_timestamp():
+    now = datetime.datetime.now()
+    print (now.strftime("%Y-%m-%d %H:%M:%S"))
